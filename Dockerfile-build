@@ -1,0 +1,6 @@
+FROM ubuntu:groovy
+
+RUN apt update -y && \
+    apt install -y gcc g++ \
+                   libboost-dev libboost-test-dev \
+                   libicu-dev tao-pegtl-dev
