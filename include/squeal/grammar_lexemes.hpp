@@ -200,20 +200,21 @@ namespace squeal
         struct simple_digit : tao::pegtl::utf8::range<'0', '9'> {};
 
         struct sign : tao::pegtl::sor<plus_sign, minus_sign> {};
+        struct opt_sign : tao::pegtl::opt<sign> {};
 
-        struct unsigned_integer
-            : tao::pegtl::plus<simple_digit> {};
+        struct unsigned_integer_ : tao::pegtl::plus<simple_digit> {};
+        struct unsigned_integer : unsigned_integer_ {};
 
-        struct signed_integer : tao::pegtl::seq<tao::pegtl::opt<sign>, unsigned_integer> {};
+        struct signed_integer : tao::pegtl::seq<opt_sign, unsigned_integer> {};
 
         struct opt_period_opt_unsigned_integer
-            : tao::pegtl::opt<tao::pegtl::seq<period, tao::pegtl::opt<unsigned_integer>>> {};
+            : tao::pegtl::opt<tao::pegtl::seq<period, tao::pegtl::opt<unsigned_integer_>>> {};
 
-        struct period_unsigned_integer : tao::pegtl::seq<period, unsigned_integer> {};
+        struct period_unsigned_integer : tao::pegtl::seq<period, unsigned_integer_> {};
 
         struct exact_numeric_literal
             : tao::pegtl::sor<
-                tao::pegtl::seq<unsigned_integer, opt_period_opt_unsigned_integer>,
+                tao::pegtl::seq<unsigned_integer_, opt_period_opt_unsigned_integer>,
                 period_unsigned_integer>
         {};
 
@@ -223,14 +224,14 @@ namespace squeal
 
         struct approximate_numeric_literal
             : tao::pegtl::seq<mantissa,
-                              tao::pegtl::utf8::one<'E'>,
+                              tao::pegtl::utf8::one<'E', 'e'>,
                               exponent>
         {};
 
         struct unsigned_numeric_literal : tao::pegtl::sor<exact_numeric_literal, approximate_numeric_literal> {};
 
         struct signed_numeric_literal
-            : tao::pegtl::seq<tao::pegtl::opt<sign>, unsigned_numeric_literal>
+            : tao::pegtl::seq<opt_sign, unsigned_numeric_literal>
         {};
 
         struct general_literal

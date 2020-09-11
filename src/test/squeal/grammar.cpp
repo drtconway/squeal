@@ -102,3 +102,38 @@ BOOST_AUTO_TEST_CASE( regular_identifier0 )
     BOOST_CHECK_EQUAL(result, true);
 }
 
+BOOST_AUTO_TEST_CASE( keyword_SELECT0 )
+{
+    tao::pegtl::string_input in(u8"SELECT", "string");
+    bool result = tao::pegtl::parse<squeal::grammar::keywords::SELECT>(in);
+    BOOST_CHECK_EQUAL(result, true);
+}
+
+BOOST_AUTO_TEST_CASE( keyword_SELECT1 )
+{
+    tao::pegtl::string_input in(u8"select", "string");
+    bool result = tao::pegtl::parse<squeal::grammar::keywords::SELECT>(in);
+    BOOST_CHECK_EQUAL(result, true);
+}
+
+BOOST_AUTO_TEST_CASE( keyword_SELECT2 )
+{
+    tao::pegtl::string_input in(u8"SeLeCt", "string");
+    bool result = tao::pegtl::parse<squeal::grammar::keywords::SELECT>(in);
+    BOOST_CHECK_EQUAL(result, true);
+}
+
+BOOST_AUTO_TEST_CASE( exact_numeric_literal0 )
+{
+    tao::pegtl::string_input in(u8"123", "string");
+    bool result = tao::pegtl::parse<squeal::grammar::exact_numeric_literal>(in);
+    BOOST_CHECK_EQUAL(result, true);
+}
+
+BOOST_AUTO_TEST_CASE( exact_numeric_literal1 )
+{
+    tao::pegtl::string_input in(u8"123.456", "string");
+    bool result = tao::pegtl::parse<squeal::grammar::exact_numeric_literal>(in);
+    BOOST_CHECK_EQUAL(result, true);
+}
+
