@@ -165,3 +165,51 @@ BOOST_AUTO_TEST_CASE( signed_numeric_literal0 )
     BOOST_CHECK_EQUAL(p.get() != NULL, true);
     BOOST_CHECK_EQUAL(p->text, src);
 }
+
+BOOST_AUTO_TEST_CASE( character_string_literal0 )
+{
+    std::string src(u8"'a string'");
+
+    tao::pegtl::string_input in(src, "string");
+
+    squeal::parsing::state S;
+    bool result = tao::pegtl::parse<squeal::grammar::character_string_literal, squeal::parsing::build_ast>(in, S);
+    BOOST_CHECK_EQUAL(result, true);
+
+    BOOST_CHECK_EQUAL(S.nodes.size(), 1);
+    squeal::parsing::character_string_literal_node_ptr p = std::dynamic_pointer_cast<squeal::parsing::character_string_literal_node>(S.nodes[0]);
+    BOOST_CHECK_EQUAL(p.get() != NULL, true);
+    BOOST_CHECK_EQUAL(p->text, src);
+}
+
+BOOST_AUTO_TEST_CASE( character_string_literal1 )
+{
+    std::string src(u8"'a '' string'");
+
+    tao::pegtl::string_input in(src, "string");
+
+    squeal::parsing::state S;
+    bool result = tao::pegtl::parse<squeal::grammar::character_string_literal, squeal::parsing::build_ast>(in, S);
+    BOOST_CHECK_EQUAL(result, true);
+
+    BOOST_CHECK_EQUAL(S.nodes.size(), 1);
+    squeal::parsing::character_string_literal_node_ptr p = std::dynamic_pointer_cast<squeal::parsing::character_string_literal_node>(S.nodes[0]);
+    BOOST_CHECK_EQUAL(p.get() != NULL, true);
+    BOOST_CHECK_EQUAL(p->text, src);
+}
+
+BOOST_AUTO_TEST_CASE( character_string_literal2 )
+{
+    std::string src(u8"_utf8'a string'");
+
+    tao::pegtl::string_input in(src, "string");
+
+    squeal::parsing::state S;
+    bool result = tao::pegtl::parse<squeal::grammar::character_string_literal, squeal::parsing::build_ast>(in, S);
+    BOOST_CHECK_EQUAL(result, true);
+
+    BOOST_CHECK_EQUAL(S.nodes.size(), 1);
+    squeal::parsing::character_string_literal_node_ptr p = std::dynamic_pointer_cast<squeal::parsing::character_string_literal_node>(S.nodes[0]);
+    BOOST_CHECK_EQUAL(p.get() != NULL, true);
+    BOOST_CHECK_EQUAL(p->text, src);
+}

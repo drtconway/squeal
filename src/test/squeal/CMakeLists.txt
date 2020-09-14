@@ -19,3 +19,4 @@ foreach(testsource ${testsources})
     add_test(NAME ${exename} COMMAND ${exename})
 endforeach(testsource)
 
+add_subdirectory(util)

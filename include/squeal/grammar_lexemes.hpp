@@ -35,6 +35,9 @@ namespace squeal
         struct left_brace : tao::pegtl::utf8::one<'{'> {};
         struct right_brace : tao::pegtl::utf8::one<'}'> {};
 
+        struct simple_Latin_letter : tao::pegtl::utf8::ranges<'a', 'z', 'A', 'Z'> {};
+        struct digit : tao::pegtl::utf8::range<'0', '9'> {};
+
         //
         // Character classes
         //
@@ -121,23 +124,17 @@ namespace squeal
 
         struct regular_identifier : identifier_body {};
 
-        struct doublequote : tao::pegtl::utf8::one<'"'> {};
+        struct doublequote_symbol : tao::pegtl::seq<double_quote, double_quote> {};
 
-        struct non_doublequote_character
-            : tao::pegtl::seq<tao::pegtl::not_at<doublequote>, tao::pegtl::utf8::any>
-        {};
+        struct non_doublequote_character : tao::pegtl::seq<tao::pegtl::not_at<double_quote>, tao::pegtl::utf8::any> {};
 
-        struct delimited_identifier_part
-            : tao::pegtl::sor<
-                non_doublequote_character,
-                tao::pegtl::seq<doublequote,doublequote>>
-        {};
+        struct delimited_identifier_part : tao::pegtl::sor<non_doublequote_character, doublequote_symbol> {};
 
         struct delimited_identifier
             : tao::pegtl::seq<
-                doublequote,
+                double_quote,
                 tao::pegtl::plus<delimited_identifier_part>,
-                doublequote>
+                double_quote>
         {};
 
         struct actual_identifier
@@ -174,7 +171,6 @@ namespace squeal
                 tao::pegtl::utf8::one<'/'>>
         {};
 
-        struct separator;
         struct bracketed_comment_contents
             : tao::pegtl::star<tao::pegtl::sor<separator, tao::pegtl::utf8::any>>
         {};
@@ -190,8 +186,8 @@ namespace squeal
 
         struct white_space : tao::pegtl::utf8::icu::white_space {};
 
-        struct separator : tao::pegtl::sor<comment, white_space> {};
-        struct separators : tao::pegtl::plus<separator> {};
+        struct separator_single : tao::pegtl::sor<comment, white_space> {};
+        struct separator : tao::pegtl::plus<separator_single> {};
 
         //
         // Literals
@@ -245,6 +241,43 @@ namespace squeal
                 interval_literal,
                 boolean_literal>
         {};
+
+        struct unqualified_schema_name : identifier {};
+
+        struct catalog_name : identifier {};
+
+        struct SQL_language_identifier
+            : tao::pegtl::seq<
+                SQL_language_identifier_start,
+                tao::pegtl::star<SQL_language_identifier_part>>
+        {};
+
+        struct SQL_language_identifier_start : simple_Latin_letter {};
+
+        struct SQL_language_identifier_part
+            : tao::pegtl::sor<underscore, simple_Latin_letter, digit> {};
+
+        struct schema_name
+            : tao::pegtl::seq<
+                tao::pegtl::opt<catalog_name, period>,
+                unqualified_schema_name>
+        {};
+
+        struct character_set_name
+            : tao::pegtl::seq<
+                tao::pegtl::opt<schema_name, period>,
+                SQL_language_identifier>
+        {};
+
+        struct standard_character_set_name : character_set_name {};
+        struct implementation_defined_character_set_name : character_set_name {};
+        struct user_defined_character_set_name : character_set_name {};
+
+        struct character_set_specification
+            : tao::pegtl::sor<
+                standard_character_set_name,
+                implementation_defined_character_set_name,
+                user_defined_character_set_name> {};
 
         struct character_string_literal_part
             : tao::pegtl::seq<quote, tao::pegtl::star<character_representation>, quote> {};
@@ -395,6 +428,18 @@ namespace squeal
             > {};
 
         struct boolean_literal : tao::pegtl::sor<keywords::TRUE_, keywords::FALSE_, keywords::UNKNOWN> {};
+
+        struct qualified_identifier : identifier {};
+
+        struct schema_qualified_type_name
+            : tao::pegtl::seq<
+                tao::pegtl::opt<schema_name, period>,
+                qualified_identifier>
+        {};
+
+        struct user_defined_type_name : schema_qualified_type_name {};
+
+        struct user_defined_type : user_defined_type_name {};
     }
     // namespace grammar
 }

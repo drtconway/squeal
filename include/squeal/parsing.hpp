@@ -208,6 +208,12 @@ namespace squeal
                 p_state.nodes.push_back(n);
             }
         };
+
+        using character_string_literal_node = basic_node<squeal::grammar::character_string_literal>;
+        using character_string_literal_node_ptr = std::shared_ptr<character_string_literal_node>;
+        template<>
+        struct build_ast<squeal::grammar::character_string_literal>
+            : build_ast_basic<squeal::grammar::character_string_literal> {};
     }
     // namespace parsing
 }

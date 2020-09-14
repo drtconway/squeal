@@ -12,7 +12,7 @@ namespace squeal
 
             template <typename Separator, typename Rule0, typename... RulesRest>
             struct interleaved<Separator, Rule0, RulesRest...>
-                : tao::pegtl::seq<Rule0, Separator, interleaved<Separator, RulesRest...>> {};
+                : tao::pegtl::seq<Separator, Rule0, interleaved<Separator, RulesRest...>> {};
 
             template <typename Separator, typename Rule0>
             struct interleaved<Separator, Rule0>
