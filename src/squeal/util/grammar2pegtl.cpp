@@ -211,6 +211,84 @@ namespace //anonymous
             p_out << ">";
         });
         if (r) { return; }
+        r = attempt<crang_node>(p_ptr, [&](const crang_node& p_node) mutable {
+            vector<string> singles;
+            vector<pair<string,string>> ranges;
+            for (size_t i = 0; i < p_node.parts.size(); ++i)
+            {
+                switch (p_node.parts[i].index())
+                {
+                    case 0:
+                    {
+                        singles.push_back(std::get<0>(p_node.parts[i]));
+                        break;
+                    }
+                    case 1:
+                    {
+                        ranges.push_back(std::get<1>(p_node.parts[i]));
+                        break;
+                    }
+                }
+            }
+            if (singles.size() > 0 && ranges.size() == 0)
+            {
+                indent(p_out, p_ind);
+                p_out << "pegtl::utf8::one<";
+                for (size_t i = 0; i < singles.size(); ++i)
+                {
+                    if (i > 0)
+                    {
+                        p_out << ", ";
+                    }
+                    p_out << "'" << singles[i] << "'";
+                }
+                p_out << ">";
+            }
+            else if (singles.size() == 0 && ranges.size() > 0)
+            {
+                indent(p_out, p_ind);
+                p_out << "pegtl::utf8::ranges<";
+                for (size_t i = 0; i < ranges.size(); ++i)
+                {
+                    if (i > 0)
+                    {
+                        p_out << ", ";
+                    }
+                    p_out << "'" << ranges[i].first << "', '" << ranges[i].second << "'";
+                }
+                p_out << ">";
+            }
+            else
+            {
+                indent(p_out, p_ind);
+                p_out << "pegtl::utf8::sor<\n";
+                indent(p_out, p_ind+1);
+                p_out << "pegtl::utf8::one<";
+                for (size_t i = 0; i < singles.size(); ++i)
+                {
+                    if (i > 0)
+                    {
+                        p_out << ", ";
+                    }
+                    p_out << "'" << singles[i] << "'";
+                }
+                p_out << ">,\n";
+                indent(p_out, p_ind+1);
+                p_out << "pegtl::utf8::ranges<";
+                for (size_t i = 0; i < ranges.size(); ++i)
+                {
+                    if (i > 0)
+                    {
+                        p_out << ", ";
+                    }
+                    p_out << "'" << ranges[i].first << "', '" << ranges[i].second << "'";
+                }
+                p_out << ">\n";
+                indent(p_out, p_ind);
+                p_out << ">";
+            }
+        });
+        if (r) { return; }
         r = attempt<conj_node>(p_ptr, [&](const conj_node& p_node) mutable {
             indent(p_out, p_ind);
             p_out << p_ns << "seq<\n";
