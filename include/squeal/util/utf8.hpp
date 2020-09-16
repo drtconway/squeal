@@ -9,6 +9,63 @@ namespace squeal
     {
         namespace utf8
         {
+            struct encoder
+            {
+                encoder(std::string& p_dest)
+                    : m_dest(p_dest)
+                {
+                }
+
+                encoder& push_back(char32_t p_ch)
+                {
+                    if (p_ch <= 0x7F)
+                    {
+                        m_dest.push_back(p_ch);
+                    }
+                    else if (p_ch <= 0x7FF)
+                    {
+                        uint8_t c1 = 0x80 | (p_ch & 0x3F);
+                        p_ch >>= 6;
+                        uint8_t c0 = 0xC0 | (p_ch & 0x1F);
+                        m_dest.push_back(c0);
+                        m_dest.push_back(c1);
+                    }
+                    else if (p_ch <= 0xFFFF)
+                    {
+                        uint8_t c2 = 0x80 | (p_ch & 0x3F);
+                        p_ch >>= 6;
+                        uint8_t c1 = 0x80 | (p_ch & 0x3F);
+                        p_ch >>= 6;
+                        uint8_t c0 = 0xE0 | (p_ch & 0xF);
+                        m_dest.push_back(c0);
+                        m_dest.push_back(c1);
+                        m_dest.push_back(c2);
+                    }
+                    else if (p_ch <= 0x10FFF)
+                    {
+                        uint8_t c3 = 0x80 | (p_ch & 0x3F);
+                        p_ch >>= 6;
+                        uint8_t c2 = 0x80 | (p_ch & 0x3F);
+                        p_ch >>= 6;
+                        uint8_t c1 = 0x80 | (p_ch & 0x3F);
+                        p_ch >>= 6;
+                        uint8_t c0 = 0xF0 | (p_ch & 0x7);
+                        m_dest.push_back(c0);
+                        m_dest.push_back(c1);
+                        m_dest.push_back(c2);
+                        m_dest.push_back(c3);
+                    }
+                    else
+                    {
+                        throw std::runtime_error("code point out of range");
+                    }
+                    return *this;
+                }
+
+            private:
+                std::string& m_dest;
+            };
+
             struct decoder
             {
                 class const_iterator

@@ -80,7 +80,9 @@ namespace squeal
 
         struct brace : seq<lbrace, disj, rbrace> {};
 
-        struct escape_sequence : pegtl::utf8::one<')', '\\', '-'> {};
+        struct simple_escape_sequence : pegtl::utf8::one<')', '\\', '-'> {};
+
+        struct escape_sequence : simple_escape_sequence {};
 
         struct escaped_rchar : pegtl::if_must<pegtl::utf8::one<'\\'>, escape_sequence> {};
 
@@ -403,7 +405,7 @@ namespace squeal
         };
 
         template<>
-        struct build_ast<escape_sequence>
+        struct build_ast<simple_escape_sequence>
         {
             template<typename ActionInput>
             static void apply(const ActionInput& p_in, state& p_state)
