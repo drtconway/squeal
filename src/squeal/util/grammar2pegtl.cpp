@@ -240,7 +240,7 @@ namespace //anonymous
                     {
                         p_out << ", ";
                     }
-                    p_out << singles[i];
+                    p_out << str(format("0x%04x") % singles[i]);
                 }
                 p_out << ">";
             }
@@ -254,7 +254,7 @@ namespace //anonymous
                     {
                         p_out << ", ";
                     }
-                    p_out << ranges[i].first << ", " << ranges[i].second;
+                    p_out << str(format("0x%04x, 0x%04x") % ranges[i].first % ranges[i].second);
                 }
                 p_out << ">";
             }
@@ -270,7 +270,7 @@ namespace //anonymous
                     {
                         p_out << ", ";
                     }
-                    p_out << singles[i];
+                    p_out << str(format("0x%04x") % singles[i]);
                 }
                 p_out << ">,\n";
                 indent(p_out, p_ind+1);
@@ -281,7 +281,7 @@ namespace //anonymous
                     {
                         p_out << ", ";
                     }
-                    p_out << ranges[i].first << ", " << ranges[i].second;
+                    p_out << str(format("0x%04x, 0x%04x") % ranges[i].first % ranges[i].second);
                 }
                 p_out << ">\n";
                 indent(p_out, p_ind);
