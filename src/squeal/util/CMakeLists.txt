@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
 
 set(util_sources
-  grammar2pegtl.cpp)
+    metasqueal.cpp)
 
 foreach(utilsourcefile ${util_sources})
     get_filename_component(exename ${utilsourcefile} NAME_WE)

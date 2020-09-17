@@ -233,8 +233,11 @@ BOOST_AUTO_TEST_CASE( defn0 )
     bool result = tao::pegtl::parse<squeal::meta_grammar::definition, squeal::meta_grammar::build_ast>(in, S);
     BOOST_CHECK_EQUAL(result, true);
 
-    BOOST_REQUIRE_EQUAL(S.nodes.size(), 1);
-    squeal::meta_grammar::defn_node_ptr p = std::dynamic_pointer_cast<squeal::meta_grammar::defn_node>(S.nodes[0]);
+    BOOST_REQUIRE_EQUAL(S.nodes.size(), 0);
+    BOOST_REQUIRE_EQUAL(S.rules.size(), 1);
+    auto itr = S.rules.find("<a>");
+    BOOST_REQUIRE_EQUAL(itr != S.rules.end(), true);
+    squeal::meta_grammar::defn_node_ptr p = std::dynamic_pointer_cast<squeal::meta_grammar::defn_node>(itr->second);
     BOOST_REQUIRE_EQUAL(p.get() != NULL, true);
 }
 
@@ -249,8 +252,11 @@ BOOST_AUTO_TEST_CASE( defn1 )
     bool result = tao::pegtl::parse<squeal::meta_grammar::definition, squeal::meta_grammar::build_ast>(in, S);
     BOOST_CHECK_EQUAL(result, true);
 
-    BOOST_REQUIRE_EQUAL(S.nodes.size(), 1);
-    squeal::meta_grammar::defn_node_ptr p = std::dynamic_pointer_cast<squeal::meta_grammar::defn_node>(S.nodes[0]);
+    BOOST_REQUIRE_EQUAL(S.nodes.size(), 0);
+    BOOST_REQUIRE_EQUAL(S.rules.size(), 1);
+    auto itr = S.rules.find("<SQL object identifier>");
+    BOOST_REQUIRE_EQUAL(itr != S.rules.end(), true);
+    squeal::meta_grammar::defn_node_ptr p = std::dynamic_pointer_cast<squeal::meta_grammar::defn_node>(itr->second);
     BOOST_REQUIRE_EQUAL(p.get() != NULL, true);
 }
 
@@ -265,7 +271,53 @@ BOOST_AUTO_TEST_CASE( defn2 )
     bool result = tao::pegtl::parse<squeal::meta_grammar::definition, squeal::meta_grammar::build_ast>(in, S);
     BOOST_CHECK_EQUAL(result, true);
 
-    BOOST_REQUIRE_EQUAL(S.nodes.size(), 1);
-    squeal::meta_grammar::defn_node_ptr p = std::dynamic_pointer_cast<squeal::meta_grammar::defn_node>(S.nodes[0]);
+    BOOST_REQUIRE_EQUAL(S.nodes.size(), 0);
+    BOOST_REQUIRE_EQUAL(S.rules.size(), 1);
+    auto itr = S.rules.find("<SQL-client module definition>");
+    BOOST_REQUIRE_EQUAL(itr != S.rules.end(), true);
+    squeal::meta_grammar::defn_node_ptr p = std::dynamic_pointer_cast<squeal::meta_grammar::defn_node>(itr->second);
     BOOST_REQUIRE_EQUAL(p.get() != NULL, true);
+}
+
+BOOST_AUTO_TEST_CASE( percent0 )
+{
+    std::string src("%");
+
+    tao::pegtl::string_input in(src, "string");
+
+    squeal::meta_grammar::state S;
+
+    bool result = tao::pegtl::parse<squeal::meta_grammar::percent, squeal::meta_grammar::build_ast>(in, S);
+    BOOST_CHECK_EQUAL(result, true);
+}
+
+BOOST_AUTO_TEST_CASE( meta_rule_name0 )
+{
+    std::string src("token-rule");
+
+    tao::pegtl::string_input in(src, "string");
+
+    squeal::meta_grammar::state S;
+
+    bool result = tao::pegtl::parse<squeal::meta_grammar::meta_rule_name, squeal::meta_grammar::build_ast>(in, S);
+    BOOST_CHECK_EQUAL(result, true);
+}
+
+BOOST_AUTO_TEST_CASE( meta0 )
+{
+    std::string src("% token-rule <token>");
+
+    tao::pegtl::string_input in(src, "string");
+
+    squeal::meta_grammar::state S;
+
+    bool result = tao::pegtl::parse<squeal::meta_grammar::meta_rule, squeal::meta_grammar::build_ast>(in, S);
+    BOOST_CHECK_EQUAL(result, true);
+
+    BOOST_REQUIRE_EQUAL(S.nodes.size(), 0);
+    BOOST_REQUIRE_EQUAL(S.rules.size(), 0);
+    BOOST_REQUIRE_EQUAL(S.meta.size(), 1);
+    auto itr = S.meta.find("token-rule");
+    BOOST_REQUIRE_EQUAL(itr != S.meta.end(), true);
+    BOOST_REQUIRE_EQUAL(itr->second, "<token>");
 }

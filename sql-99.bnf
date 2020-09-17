@@ -1,3 +1,9 @@
+%token-rule            <token>
+
+%reserved-word-rule    <reserved word>
+
+%other-keyword-rule    <non-reserved word>
+
 <SQL terminal character> ::= <SQL language character>
 
 <SQL language character> ::= <simple Latin letter> | <digit> | <SQL special character>

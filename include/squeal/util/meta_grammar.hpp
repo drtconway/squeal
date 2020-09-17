@@ -67,6 +67,7 @@ namespace squeal
         struct bar : pegtl::ascii::one<'|'> {};
         struct dash : pegtl::ascii::one<'-'> {};
         struct colon : pegtl::ascii::one<':'> {};
+        struct percent : pegtl::ascii::one<'%'> {};
 
         struct assigns : pegtl::ascii::string<':', ':', '='> {};
 
@@ -150,9 +151,16 @@ namespace squeal
 
         struct expression : pegtl::sor<disj, single, special> {};
 
-        struct definition
+        struct grammar_definition
             : seq<name, assigns, expression> {};
 
+        struct meta_rule_name
+            : pegtl::plus<pegtl::sor<pegtl::ascii::alnum, pegtl::ascii::one<'-', '_'>>>
+        {};
+
+        struct meta_rule : seq<percent, meta_rule_name, name> {};
+
+        struct definition : pegtl::sor<meta_rule, grammar_definition> {};
 
         //
         // Syntax tree nodes and parser state
@@ -196,10 +204,13 @@ namespace squeal
 
         struct context
         {
-            const std::set<std::string> keywords;
-
             std::ostream& out;
             int ind;
+            std::set<std::string> keywords;
+
+            context(std::ostream& p_out)
+                : out(p_out), ind(0)
+            {}
 
             void indent()
             {
@@ -230,6 +241,10 @@ namespace squeal
         {
             virtual ~node() {}
 
+            virtual void names(std::set<std::string>& p_names) const = 0;
+
+            virtual void words(std::set<std::string>& p_words) const = 0;
+
             virtual void render(context& p_ctxt) const = 0;
 
             // For debugging
@@ -241,6 +256,9 @@ namespace squeal
         struct state
         {
             std::vector<node_ptr> nodes;
+
+            std::map<std::string, std::string> meta;
+            std::map<std::string, node_ptr> rules;
 
             void dump(std::ostream& p_out) const
             {
@@ -264,6 +282,15 @@ namespace squeal
             {
             }
 
+            virtual void names(std::set<std::string>& p_names) const
+            {
+                p_names.insert(name);
+            }
+
+            virtual void words(std::set<std::string>& p_words) const
+            {
+            }
+
             virtual void render(context& p_ctxt) const
             {
                 p_ctxt.indent();
@@ -281,6 +308,15 @@ namespace squeal
             word_node(const std::string& p_word)
                 : word(p_word)
             {
+            }
+
+            virtual void names(std::set<std::string>& p_names) const
+            {
+            }
+
+            virtual void words(std::set<std::string>& p_words) const
+            {
+                p_words.insert(word);
             }
 
             virtual void render(context& p_ctxt) const
@@ -324,6 +360,14 @@ namespace squeal
             {
             }
 
+            virtual void names(std::set<std::string>& p_names) const
+            {
+            }
+
+            virtual void words(std::set<std::string>& p_words) const
+            {
+            }
+
             virtual void render(context& p_ctxt) const
             {
                 p_ctxt.indent();
@@ -334,75 +378,6 @@ namespace squeal
         };
         using special_node_ptr = std::shared_ptr<special_node>;
 
-        struct opt_node : node
-        {
-            node_ptr child;
-
-            opt_node(const node_ptr& p_child)
-                : child(p_child)
-            {}
-
-            virtual void render(context& p_ctxt) const
-            {
-                p_ctxt.indent();
-                p_ctxt.out << "tao::pegtl::opt<\n";
-                {
-                    scope S(p_ctxt);
-                    child->render(p_ctxt);
-                }
-                p_ctxt.out << ">";
-            }
-
-            virtual std::string dump() const { return std::string("(") + child->dump() + std::string(")?"); }
-        };
-        using opt_node_ptr = std::shared_ptr<opt_node>;
-
-        struct plus_node : node
-        {
-            node_ptr child;
-
-            plus_node(const node_ptr& p_child)
-                : child(p_child)
-            {}
-
-            virtual void render(context& p_ctxt) const
-            {
-                p_ctxt.indent();
-                p_ctxt.out << "tao::pegtl::plus<\n";
-                {
-                    scope S(p_ctxt);
-                    child->render(p_ctxt);
-                }
-                p_ctxt.out << ">";
-            }
-
-            virtual std::string dump() const { return std::string("(") + child->dump() + std::string(")+"); }
-        };
-        using plus_node_ptr = std::shared_ptr<plus_node>;
-
-        struct star_node : node
-        {
-            node_ptr child;
-
-            star_node(const node_ptr& p_child)
-                : child(p_child)
-            {}
-
-            virtual void render(context& p_ctxt) const
-            {
-                p_ctxt.indent();
-                p_ctxt.out << "tao::pegtl::star<\n";
-                {
-                    scope S(p_ctxt);
-                    child->render(p_ctxt);
-                }
-                p_ctxt.out << ">";
-            }
-
-            virtual std::string dump() const { return std::string("(") + child->dump() + std::string(")*"); }
-        };
-        using star_node_ptr = std::shared_ptr<star_node>;
-
         struct crang_node : node
         {
             using single = char32_t;
@@ -410,6 +385,14 @@ namespace squeal
             using single_or_range = std::variant<single,range>;
 
             std::vector<single_or_range> parts;
+
+            virtual void names(std::set<std::string>& p_names) const
+            {
+            }
+
+            virtual void words(std::set<std::string>& p_words) const
+            {
+            }
 
             virtual void render(context& p_ctxt) const
             {
@@ -530,6 +513,16 @@ namespace squeal
                 : part(crang_node::range(p_fst, p_lst))
             {}
 
+            virtual void names(std::set<std::string>& p_names) const
+            {
+                throw std::logic_error("cannot get names from partial character ranges");
+            }
+
+            virtual void words(std::set<std::string>& p_words) const
+            {
+                throw std::logic_error("cannot get words from partial character ranges");
+            }
+
             virtual void render(context& p_ctxt) const
             {
                 throw std::logic_error("cannot render partial character ranges");
@@ -568,6 +561,14 @@ namespace squeal
                 : name(p_name)
             {}
 
+            virtual void names(std::set<std::string>& p_names) const
+            {
+            }
+
+            virtual void words(std::set<std::string>& p_words) const
+            {
+            }
+
             virtual void render(context& p_ctxt) const
             {
                 p_ctxt.indent();
@@ -585,9 +586,124 @@ namespace squeal
         };
         using cclass_node_ptr = std::shared_ptr<cclass_node>;
 
+        struct opt_node : node
+        {
+            node_ptr child;
+
+            opt_node(const node_ptr& p_child)
+                : child(p_child)
+            {}
+
+            virtual void names(std::set<std::string>& p_names) const
+            {
+                child->names(p_names);
+            }
+
+            virtual void words(std::set<std::string>& p_words) const
+            {
+                child->words(p_words);
+            }
+
+            virtual void render(context& p_ctxt) const
+            {
+                p_ctxt.indent();
+                p_ctxt.out << "tao::pegtl::opt<\n";
+                {
+                    scope S(p_ctxt);
+                    child->render(p_ctxt);
+                }
+                p_ctxt.out << ">";
+            }
+
+            virtual std::string dump() const { return std::string("(") + child->dump() + std::string(")?"); }
+        };
+        using opt_node_ptr = std::shared_ptr<opt_node>;
+
+        struct plus_node : node
+        {
+            node_ptr child;
+
+            plus_node(const node_ptr& p_child)
+                : child(p_child)
+            {}
+
+            virtual void names(std::set<std::string>& p_names) const
+            {
+                child->names(p_names);
+            }
+
+            virtual void words(std::set<std::string>& p_words) const
+            {
+                child->words(p_words);
+            }
+
+            virtual void render(context& p_ctxt) const
+            {
+                p_ctxt.indent();
+                p_ctxt.out << "tao::pegtl::plus<\n";
+                {
+                    scope S(p_ctxt);
+                    child->render(p_ctxt);
+                }
+                p_ctxt.out << ">";
+            }
+
+            virtual std::string dump() const { return std::string("(") + child->dump() + std::string(")+"); }
+        };
+        using plus_node_ptr = std::shared_ptr<plus_node>;
+
+        struct star_node : node
+        {
+            node_ptr child;
+
+            star_node(const node_ptr& p_child)
+                : child(p_child)
+            {}
+
+            virtual void names(std::set<std::string>& p_names) const
+            {
+                child->names(p_names);
+            }
+
+            virtual void words(std::set<std::string>& p_words) const
+            {
+                child->words(p_words);
+            }
+
+            virtual void render(context& p_ctxt) const
+            {
+                p_ctxt.indent();
+                p_ctxt.out << "tao::pegtl::star<\n";
+                {
+                    scope S(p_ctxt);
+                    child->render(p_ctxt);
+                }
+                p_ctxt.out << ">";
+            }
+
+            virtual std::string dump() const { return std::string("(") + child->dump() + std::string(")*"); }
+        };
+        using star_node_ptr = std::shared_ptr<star_node>;
+
         struct conj_node : node
         {
             std::deque<node_ptr> nodes;
+
+            virtual void names(std::set<std::string>& p_names) const
+            {
+                for (auto itr = nodes.begin(); itr != nodes.end(); ++itr)
+                {
+                    (*itr)->names(p_names);
+                }
+            }
+
+            virtual void words(std::set<std::string>& p_words) const
+            {
+                for (auto itr = nodes.begin(); itr != nodes.end(); ++itr)
+                {
+                    (*itr)->words(p_words);
+                }
+            }
 
             virtual void render(context& p_ctxt) const
             {
@@ -627,6 +743,22 @@ namespace squeal
         struct disj_node : node
         {
             std::vector<node_ptr> nodes;
+
+            virtual void names(std::set<std::string>& p_names) const
+            {
+                for (auto itr = nodes.begin(); itr != nodes.end(); ++itr)
+                {
+                    (*itr)->names(p_names);
+                }
+            }
+
+            virtual void words(std::set<std::string>& p_words) const
+            {
+                for (auto itr = nodes.begin(); itr != nodes.end(); ++itr)
+                {
+                    (*itr)->words(p_words);
+                }
+            }
 
             virtual void render(context& p_ctxt) const
             {
@@ -672,6 +804,17 @@ namespace squeal
                 : name(p_name), defn(p_defn)
             {
             }
+
+            virtual void names(std::set<std::string>& p_names) const
+            {
+                defn->names(p_names);
+            }
+
+            virtual void words(std::set<std::string>& p_words) const
+            {
+                defn->words(p_words);
+            }
+
             virtual void render(context& p_ctxt) const
             {
                 p_ctxt.indent();
@@ -977,7 +1120,7 @@ namespace squeal
         };
 
         template<>
-        struct build_ast<definition>
+        struct build_ast<grammar_definition>
         {
             template<typename ActionInput>
             static void apply(const ActionInput& p_in, state& p_state)
@@ -987,10 +1130,37 @@ namespace squeal
                 node_ptr q = p_state.nodes.back();
                 p_state.nodes.pop_back();
                 name_node_ptr n = std::dynamic_pointer_cast<name_node>(q);
-                node_ptr r(new defn_node(n->name, p));
-                p_state.nodes.push_back(r);
+                p_state.rules[n->name] = node_ptr(new defn_node(n->name, p));
             }
         };
+
+        template<>
+        struct build_ast<meta_rule_name>
+        {
+            template<typename ActionInput>
+            static void apply(const ActionInput& p_in, state& p_state)
+            {
+                node_ptr p(new name_node(p_in.string()));
+                p_state.nodes.push_back(p);
+            }
+        };
+
+        template<>
+        struct build_ast<meta_rule>
+        {
+            template<typename ActionInput>
+            static void apply(const ActionInput& p_in, state& p_state)
+            {
+                node_ptr p = p_state.nodes.back();
+                p_state.nodes.pop_back();
+                node_ptr q = p_state.nodes.back();
+                p_state.nodes.pop_back();
+                name_node_ptr mn = std::dynamic_pointer_cast<name_node>(q);
+                name_node_ptr dn = std::dynamic_pointer_cast<name_node>(p);
+                p_state.meta[mn->name] = dn->name;
+            }
+        };
+
     }
     // namespace meta_grammar
 }
