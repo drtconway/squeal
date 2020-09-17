@@ -40,7 +40,7 @@
 	|	<left brace>
 	|	<right brace>
 
-<space> ::= !! (See the Syntax Rules)
+<space> ::= (:white_space:)
 
 <double quote> ::= "
 
@@ -116,9 +116,9 @@
 
 <identifier start> ::= <initial alphabetic character> | <ideographic character>
 
-<initial alphabetic character> ::= !! (See the Syntax Rules)
+<initial alphabetic character> ::= (:alphabetic:) | <underscore>
 
-<ideographic character> ::= !! (See the Syntax Rules)
+<ideographic character> ::= (:ideographic:)
 
 <identifier part> ::=
 		<alphabetic character>
@@ -131,13 +131,13 @@
 	|	<identifier ignorable character>
 	|	<connector character>
 
-<alphabetic character> ::= !! (See the Syntax Rules)
+<alphabetic character> ::= (:alphabetic:)
 
-<decimal digit character> ::= !! (See the Syntax Rules)
+<decimal digit character> ::= (:decimialdigit:)
 
-<identifier combining character> ::= !! (See the Syntax Rules)
+<identifier combining character> ::= (:combining:)
 
-<alternate underscore> ::= !! (See the Syntax Rules)
+<alternate underscore> ::= (\uFE33\uFE34\uFE4D\uFE4E\uFE4F\uFF3F)
 
 <extender character> ::=
         (\u00B7\u02D0\u02D1\u0640\u0E46\u0EC6\u3005)
@@ -146,7 +146,7 @@
 
 <identifier ignorable character> ::= (\u200C-0x200F\u202A-\u202E\u206A-\u206FC\uFEFF)
 
-<connector character> ::= !! (See the Syntax Rules)
+<connector character> ::= (\u203F\u0204)
 
 <delimited identifier> ::= <double quote> <delimited identifier body> <double quote>
 
@@ -484,7 +484,7 @@
 
 <comment character> ::= <nonquote character> | <quote>
 
-<newline> ::= !! (See the Syntax Rules)
+<newline> ::= (\u000a) | (\u000d) (\u000a)
 
 <bracketed comment> ::=
 		<bracketed comment introducer> <bracketed comment contents> <bracketed comment terminator>
@@ -495,7 +495,7 @@
 
 <bracketed comment terminator> ::= <asterisk> <solidus>
 
-<white space> ::= !! (See the Syntax Rules)
+<white space> ::= (:white_space:)
 
 <national character string literal> ::=
 		N <quote> [ <character representation>... ] <quote>

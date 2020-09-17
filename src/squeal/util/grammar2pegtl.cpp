@@ -289,6 +289,11 @@ namespace //anonymous
             }
         });
         if (r) { return; }
+        r = attempt<cclass_node>(p_ptr, [&](const cclass_node& p_node) mutable {
+            indent(p_out, p_ind);
+            p_out << "pegtl::utf8::icu::" << p_node.name;
+        });
+        if (r) { return; }
         r = attempt<conj_node>(p_ptr, [&](const conj_node& p_node) mutable {
             indent(p_out, p_ind);
             p_out << p_ns << "seq<\n";

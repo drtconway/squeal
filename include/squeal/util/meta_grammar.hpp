@@ -56,8 +56,8 @@ namespace squeal
         struct rparen : pegtl::ascii::one<')'> {};
 
         struct bar : pegtl::ascii::one<'|'> {};
-
         struct dash : pegtl::ascii::one<'-'> {};
+        struct colon : pegtl::ascii::one<':'> {};
 
         struct assigns : pegtl::ascii::string<':', ':', '='> {};
 
@@ -86,7 +86,7 @@ namespace squeal
 
         struct brace : seq<lbrace, disj, rbrace> {};
 
-        struct simple_escape_sequence : pegtl::utf8::one<')', '\\', '-'> {};
+        struct simple_escape_sequence : pegtl::utf8::one<')', '\\', '-', ':'> {};
 
         struct unicode_quad : pegtl::seq<hexit, hexit, hexit, hexit> {};
 
@@ -102,7 +102,7 @@ namespace squeal
 
         struct escaped_rchar : pegtl::if_must<pegtl::utf8::one<'\\'>, escape_sequence> {};
 
-        struct unescaped_rchar : pegtl::utf8::not_one<'\\', ')', '-'> {};
+        struct unescaped_rchar : pegtl::utf8::not_one<'\\', ')', '-', ':'> {};
 
         struct rchar : pegtl::sor<escaped_rchar, unescaped_rchar> {};
 
@@ -116,7 +116,15 @@ namespace squeal
 
         struct crang : pegtl::seq<lparen, crangs, rparen> {};
 
-        struct atom : pegtl::sor<name, word, brac, brace, crang> {};
+        struct cclass_name
+            : pegtl::plus<
+                pegtl::sor<pegtl::ascii::alnum, pegtl::ascii::one<'_'>>
+            >
+        {};
+
+        struct cclass : pegtl::seq<lparen, colon, cclass_name, colon, rparen> {};
+
+        struct atom : pegtl::sor<name, word, brac, brace, cclass, crang> {};
 
         struct conj_cont;
 
@@ -301,6 +309,16 @@ namespace squeal
             }
         };
         using crang_part_node_ptr = std::shared_ptr<crang_part_node>;
+
+        struct cclass_node : node
+        {
+            std::string name;
+
+            cclass_node(const std::string& p_name)
+                : name(p_name)
+            {}
+        };
+        using cclass_node_ptr = std::shared_ptr<cclass_node>;
 
         struct conj_node : node
         {
@@ -554,6 +572,17 @@ namespace squeal
                     r->parts.push_back(p->part);
                 }
                 p_state.nodes.push_back(std::static_pointer_cast<node>(r));
+            }
+        };
+
+        template <>
+        struct build_ast<cclass_name>
+        {
+            template<typename ActionInput>
+            static void apply(const ActionInput& p_in, state& p_state)
+            {
+                node_ptr p(new cclass_node(p_in.string()));
+                p_state.nodes.push_back(p);
             }
         };
 
