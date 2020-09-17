@@ -37,6 +37,24 @@ BOOST_AUTO_TEST_CASE( name1 )
     BOOST_REQUIRE_EQUAL(p.get() != NULL, true);
 }
 
+BOOST_AUTO_TEST_CASE( unicode_quad0 )
+{
+    std::string src("0939");
+
+    tao::pegtl::string_input in(src, "string");
+
+    squeal::meta_grammar::state S;
+
+    bool result = tao::pegtl::parse<squeal::meta_grammar::unicode_quad, squeal::meta_grammar::build_ast>(in, S);
+    BOOST_CHECK_EQUAL(result, true);
+
+    BOOST_REQUIRE_EQUAL(S.nodes.size(), 1);
+    squeal::meta_grammar::crang_part_node_ptr p = std::dynamic_pointer_cast<squeal::meta_grammar::crang_part_node>(S.nodes[0]);
+    BOOST_REQUIRE_EQUAL(p.get() != NULL, true);
+    BOOST_REQUIRE_EQUAL(p->part.index(), 0);
+    BOOST_REQUIRE_EQUAL(std::get<0>(p->part), 0x939);
+}
+
 BOOST_AUTO_TEST_CASE( crang0 )
 {
     std::string src("(a-z)");

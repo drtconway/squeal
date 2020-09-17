@@ -6,6 +6,10 @@
 #include <deque>
 #include <variant>
 
+#ifndef SQUEAL_UTIL_UTF8_HPP
+#include "squeal/util/utf8.hpp"
+#endif
+
 namespace squeal
 {
     namespace meta_grammar
@@ -72,6 +76,8 @@ namespace squeal
                                 pegtl::ascii::any>,
                             pegtl::eof> {};
 
+        struct hexit : pegtl::utf8::ranges<'0', '9', 'a', 'f', 'A', 'F'> {};
+
         struct special : pegtl::seq<pegtl::ascii::string<'!', '!'>, pegtl::star<pegtl::ascii::any>, pegtl::eof> {};
 
         struct disj;
@@ -82,7 +88,17 @@ namespace squeal
 
         struct simple_escape_sequence : pegtl::utf8::one<')', '\\', '-'> {};
 
-        struct escape_sequence : simple_escape_sequence {};
+        struct unicode_quad : pegtl::seq<hexit, hexit, hexit, hexit> {};
+
+        struct unicode_oct : pegtl::seq<hexit, hexit, hexit, hexit, hexit, hexit, hexit, hexit> {};
+
+        struct escape_sequence
+            : pegtl::sor<
+                simple_escape_sequence,
+                pegtl::seq<pegtl::utf8::one<'u'>, unicode_quad>,
+                pegtl::seq<pegtl::utf8::one<'U'>, unicode_oct>
+            >
+        {};
 
         struct escaped_rchar : pegtl::if_must<pegtl::utf8::one<'\\'>, escape_sequence> {};
 
@@ -215,8 +231,8 @@ namespace squeal
 
         struct crang_node : node
         {
-            using single = std::string;
-            using range = std::pair<std::string,std::string>;
+            using single = char32_t;
+            using range = std::pair<char32_t,char32_t>;
             using single_or_range = std::variant<single,range>;
 
             std::vector<single_or_range> parts;
@@ -253,11 +269,11 @@ namespace squeal
         {
             crang_node::single_or_range part;
 
-            crang_part_node(const std::string& p_ch)
+            crang_part_node(char32_t p_ch)
                 : part(p_ch)
             {}
 
-            crang_part_node(const std::string& p_fst, const std::string& p_lst)
+            crang_part_node(char32_t p_fst, char32_t p_lst)
                 : part(crang_node::range(p_fst, p_lst))
             {}
 
@@ -269,14 +285,14 @@ namespace squeal
                 {
                     case 0:
                     {
-                        s += std::get<0>(part);
+                        s += std::to_string(std::get<0>(part));
                         break;
                     }
                     case 1:
                     {
-                        s += std::get<1>(part).first;
+                        s += std::to_string(std::get<1>(part).first);
                         s += "-";
-                        s += std::get<1>(part).second;
+                        s += std::to_string(std::get<1>(part).second);
                         break;
                     }
                 }
@@ -405,23 +421,101 @@ namespace squeal
         };
 
         template<>
-        struct build_ast<simple_escape_sequence>
-        {
-            template<typename ActionInput>
-            static void apply(const ActionInput& p_in, state& p_state)
-            {
-                node_ptr p(new crang_part_node(p_in.string()));
-                p_state.nodes.push_back(p);
-            }
-        };
-
-        template<>
         struct build_ast<unescaped_rchar>
         {
             template<typename ActionInput>
             static void apply(const ActionInput& p_in, state& p_state)
             {
-                node_ptr p(new crang_part_node(p_in.string()));
+                std::vector<char32_t> cs;
+                squeal::util::utf8::decoder::decode(p_in.string(), cs);
+                if (cs.size() != 1)
+                {
+                    throw std::logic_error("bad escaped character");
+                }
+                node_ptr p(new crang_part_node(cs.front()));
+                p_state.nodes.push_back(p);
+            }
+        };
+
+        template<>
+        struct build_ast<simple_escape_sequence>
+        {
+            template<typename ActionInput>
+            static void apply(const ActionInput& p_in, state& p_state)
+            {
+                std::vector<char32_t> cs;
+                squeal::util::utf8::decoder::decode(p_in.string(), cs);
+                if (cs.size() != 1)
+                {
+                    throw std::logic_error("bad escaped character");
+                }
+                node_ptr p(new crang_part_node(cs.front()));
+                p_state.nodes.push_back(p);
+            }
+        };
+
+        template<>
+        struct build_ast<unicode_quad>
+        {
+            template<typename ActionInput>
+            static void apply(const ActionInput& p_in, state& p_state)
+            {
+                char32_t ch = 0;
+                std::string x = p_in.string();
+                for (size_t i = 0; i < x.size(); ++i)
+                {
+                    if ('0' <= x[i] && x[i] <= '9')
+                    {
+                        ch = (ch << 4) + (x[i] - '0');
+                    }
+                    else if ('a' <= x[i] && x[i] <= 'f')
+                    {
+                        ch = (ch << 4) + (x[i] - 'a' + 10);
+                    }
+                    else if ('A' <= x[i] && x[i] <= 'F')
+                    {
+                        ch = (ch << 4) + (x[i] - 'A' + 10);
+                    }
+                    else
+                    {
+                        throw std::logic_error("bad hexit character");
+                    }
+                }
+
+                node_ptr p(new crang_part_node(ch));
+                p_state.nodes.push_back(p);
+            }
+        };
+
+        template<>
+        struct build_ast<unicode_oct>
+        {
+            template<typename ActionInput>
+            static void apply(const ActionInput& p_in, state& p_state)
+            {
+                char32_t ch = 0;
+                std::string x = p_in.string();
+                for (size_t i = 0; i < x.size(); ++i)
+                {
+                    if ('0' <= x[i] && x[i] <= '9')
+                    {
+                        ch = (ch << 4) + (x[i] - '0');
+                    }
+                    else if ('a' <= x[i] && x[i] <= 'f')
+                    {
+                        ch = (ch << 4) + (x[i] - 'a' + 10);
+                    }
+                    else if ('A' <= x[i] && x[i] <= 'F')
+                    {
+                        ch = (ch << 4) + (x[i] - 'A' + 10);
+                    }
+                    else
+                    {
+                        throw std::logic_error("bad hexit character");
+                    }
+                }
+
+                node_ptr p(new crang_part_node(ch));
                 p_state.nodes.push_back(p);
             }
         };

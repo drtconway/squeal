@@ -2,6 +2,8 @@
 #define SQUEAL_UTIL_UTF8_HPP
 
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace squeal
 {
@@ -195,6 +197,15 @@ namespace squeal
                 const_iterator end() const
                 {
                     return const_iterator(m_end);
+                }
+
+                static void decode(const std::string& p_str, std::vector<char32_t>& p_chs)
+                {
+                    decoder dec(p_str);
+                    for (auto itr = dec.begin(); itr != dec.end(); ++itr)
+                    {
+                        p_chs.push_back(*itr);
+                    }
                 }
 
             private:

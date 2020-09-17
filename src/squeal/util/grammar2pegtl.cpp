@@ -212,8 +212,8 @@ namespace //anonymous
         });
         if (r) { return; }
         r = attempt<crang_node>(p_ptr, [&](const crang_node& p_node) mutable {
-            vector<string> singles;
-            vector<pair<string,string>> ranges;
+            vector<char32_t> singles;
+            vector<pair<char32_t,char32_t>> ranges;
             for (size_t i = 0; i < p_node.parts.size(); ++i)
             {
                 switch (p_node.parts[i].index())
@@ -240,7 +240,7 @@ namespace //anonymous
                     {
                         p_out << ", ";
                     }
-                    p_out << "'" << singles[i] << "'";
+                    p_out << singles[i];
                 }
                 p_out << ">";
             }
@@ -254,7 +254,7 @@ namespace //anonymous
                     {
                         p_out << ", ";
                     }
-                    p_out << "'" << ranges[i].first << "', '" << ranges[i].second << "'";
+                    p_out << ranges[i].first << ", " << ranges[i].second;
                 }
                 p_out << ">";
             }
@@ -270,7 +270,7 @@ namespace //anonymous
                     {
                         p_out << ", ";
                     }
-                    p_out << "'" << singles[i] << "'";
+                    p_out << singles[i];
                 }
                 p_out << ">,\n";
                 indent(p_out, p_ind+1);
@@ -281,7 +281,7 @@ namespace //anonymous
                     {
                         p_out << ", ";
                     }
-                    p_out << "'" << ranges[i].first << "', '" << ranges[i].second << "'";
+                    p_out << ranges[i].first << ", " << ranges[i].second;
                 }
                 p_out << ">\n";
                 indent(p_out, p_ind);
