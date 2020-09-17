@@ -3,8 +3,12 @@
 
 #include <tao/pegtl.hpp>
 #include <tao/pegtl/contrib/icu/utf8.hpp>
+
 #include <deque>
+#include <set>
 #include <variant>
+
+#include <boost/format.hpp>
 
 #ifndef SQUEAL_UTIL_UTF8_HPP
 #include "squeal/util/utf8.hpp"
@@ -42,6 +46,11 @@ namespace squeal
 
         template<typename... Rules>
         using opt = pegtl::opt<seq<Rules...>>;
+
+
+        //
+        // Here's the actual grammar:
+        //
 
         struct langle : pegtl::ascii::one<'<'> {};
         struct rangle : pegtl::ascii::one<'>'> {};
@@ -144,21 +153,96 @@ namespace squeal
         struct definition
             : seq<name, assigns, expression> {};
 
+
+        //
+        // Syntax tree nodes and parser state
+        //
+
+        struct cpp
+        {
+            static std::string esc_name(const std::string& p_str)
+            {
+                std::string s(p_str.begin()+1, p_str.end()-1);
+                std::replace(s.begin(), s.end(), ' ', '_');
+                std::replace(s.begin(), s.end(), '-', '_');
+                std::replace(s.begin(), s.end(), '/', '_');
+                return s;
+            }
+
+            static std::string esc_char(char p_ch)
+            {
+                std::string s;
+                switch (p_ch)
+                {
+                    case '\'':
+                    case '\\':
+                        s.push_back('\\');
+                }
+                s.push_back(p_ch);
+                return s;
+            }
+
+            static std::string esc_word(const std::string& p_word)
+            {
+                std::string s(p_word);
+                if (p_word == "TRUE" || p_word == "FALSE" || p_word == "NULL")
+                {
+                    s.push_back('_');
+                }
+                return s;
+            }
+
+        };
+
+        struct context
+        {
+            const std::set<std::string> keywords;
+
+            std::ostream& out;
+            int ind;
+
+            void indent()
+            {
+                for (int i = 0; i < ind; ++i)
+                {
+                    out << "    ";
+                }
+            }
+        };
+
+        struct scope
+        {
+            scope(context& p_ctxt)
+                : ctxt(p_ctxt)
+            {
+                ctxt.ind += 1;
+            }
+
+            ~scope()
+            {
+                ctxt.ind -= 1;
+            }
+
+            context& ctxt;
+        };
+
         struct node
         {
             virtual ~node() {}
-            virtual std::string dump() { return std::string("*"); }
+
+            virtual void render(context& p_ctxt) const = 0;
+
+            // For debugging
+            //
+            virtual std::string dump() const = 0;
         };
         using node_ptr = std::shared_ptr<node>;
-
-        template<typename Rule>
-        struct build_ast : tao::pegtl::nothing<Rule> {};
 
         struct state
         {
             std::vector<node_ptr> nodes;
 
-            void dump(std::ostream& p_out)
+            void dump(std::ostream& p_out) const
             {
                 int i = 0;
                 for (auto itr = nodes.rbegin(); itr != nodes.rend(); ++itr, ++i)
@@ -168,6 +252,9 @@ namespace squeal
             }
         };
 
+        template<typename Rule>
+        struct build_ast : tao::pegtl::nothing<Rule> {};
+
         struct name_node : node
         {
             std::string name;
@@ -176,7 +263,14 @@ namespace squeal
                 : name(p_name)
             {
             }
-            virtual std::string dump() { return name; }
+
+            virtual void render(context& p_ctxt) const
+            {
+                p_ctxt.indent();
+                p_ctxt.out << cpp::esc_name(name);
+            }
+
+            virtual std::string dump() const { return name; }
         };
         using name_node_ptr = std::shared_ptr<name_node>;
 
@@ -188,7 +282,36 @@ namespace squeal
                 : word(p_word)
             {
             }
-            virtual std::string dump() { return word; }
+
+            virtual void render(context& p_ctxt) const
+            {
+                if (p_ctxt.keywords.count(word))
+                {
+                    p_ctxt.indent();
+                    p_ctxt.out << "keywords::" << cpp::esc_word(word);
+                    return;
+                }
+
+                if (word.size() == 1)
+                {
+                    p_ctxt.indent();
+                    p_ctxt.out << "tao::pegt::utf8::one<'" << cpp::esc_char(word[0]) << "'>";
+                    return;
+                }
+
+                p_ctxt.out << "tao::pegt::utf8::string<";
+                for (auto itr = word.begin(); itr != word.end(); ++itr)
+                {
+                    if (itr != word.begin())
+                    {
+                        p_ctxt.out << ",";
+                    }
+                    p_ctxt.out << "'" << cpp::esc_char(*itr) << "'";
+                }
+                p_ctxt.out << ">";
+            }
+
+            virtual std::string dump() const { return word; }
         };
         using word_node_ptr = std::shared_ptr<word_node>;
 
@@ -200,7 +323,14 @@ namespace squeal
                 : word(p_word)
             {
             }
-            virtual std::string dump() { return word; }
+
+            virtual void render(context& p_ctxt) const
+            {
+                p_ctxt.indent();
+                p_ctxt.out << word;
+            }
+
+            virtual std::string dump() const { return word; }
         };
         using special_node_ptr = std::shared_ptr<special_node>;
 
@@ -211,7 +341,19 @@ namespace squeal
             opt_node(const node_ptr& p_child)
                 : child(p_child)
             {}
-            virtual std::string dump() { return std::string("(") + child->dump() + std::string(")?"); }
+
+            virtual void render(context& p_ctxt) const
+            {
+                p_ctxt.indent();
+                p_ctxt.out << "tao::pegtl::opt<\n";
+                {
+                    scope S(p_ctxt);
+                    child->render(p_ctxt);
+                }
+                p_ctxt.out << ">";
+            }
+
+            virtual std::string dump() const { return std::string("(") + child->dump() + std::string(")?"); }
         };
         using opt_node_ptr = std::shared_ptr<opt_node>;
 
@@ -222,7 +364,19 @@ namespace squeal
             plus_node(const node_ptr& p_child)
                 : child(p_child)
             {}
-            virtual std::string dump() { return std::string("(") + child->dump() + std::string(")+"); }
+
+            virtual void render(context& p_ctxt) const
+            {
+                p_ctxt.indent();
+                p_ctxt.out << "tao::pegtl::plus<\n";
+                {
+                    scope S(p_ctxt);
+                    child->render(p_ctxt);
+                }
+                p_ctxt.out << ">";
+            }
+
+            virtual std::string dump() const { return std::string("(") + child->dump() + std::string(")+"); }
         };
         using plus_node_ptr = std::shared_ptr<plus_node>;
 
@@ -233,7 +387,19 @@ namespace squeal
             star_node(const node_ptr& p_child)
                 : child(p_child)
             {}
-            virtual std::string dump() { return std::string("(") + child->dump() + std::string(")*"); }
+
+            virtual void render(context& p_ctxt) const
+            {
+                p_ctxt.indent();
+                p_ctxt.out << "tao::pegtl::star<\n";
+                {
+                    scope S(p_ctxt);
+                    child->render(p_ctxt);
+                }
+                p_ctxt.out << ">";
+            }
+
+            virtual std::string dump() const { return std::string("(") + child->dump() + std::string(")*"); }
         };
         using star_node_ptr = std::shared_ptr<star_node>;
 
@@ -245,7 +411,86 @@ namespace squeal
 
             std::vector<single_or_range> parts;
 
-            virtual std::string dump()
+            virtual void render(context& p_ctxt) const
+            {
+                std::vector<char32_t> singles;
+                std::vector<range> ranges;
+                for (size_t i = 0; i < parts.size(); ++i)
+                {
+                    switch (parts[i].index())
+                    {
+                        case 0:
+                        {
+                            singles.push_back(std::get<0>(parts[i]));
+                            break;
+                        }
+                        case 1:
+                        {
+                            ranges.push_back(std::get<1>(parts[i]));
+                            break;
+                        }
+                    }
+                }
+                //std::sort(singles.begin(), singles.end());
+                //std::sort(ranges.begin(), ranges.end());
+                if (singles.size() > 0 && ranges.size() == 0)
+                {
+                    renderSingles(p_ctxt, singles);
+                }
+                else if (singles.size() == 0 && ranges.size() > 0)
+                {
+                    renderRanges(p_ctxt, ranges);
+                }
+                else
+                {
+                    p_ctxt.indent();
+                    p_ctxt.out << "pegtl::utf8::one<";
+                    {
+                        scope S(p_ctxt);
+                        renderSingles(p_ctxt, singles);
+                        p_ctxt.out << ",\n";
+                        renderRanges(p_ctxt, ranges);
+                        p_ctxt.out << "\n";
+                    }
+                    p_ctxt.out << ">";
+                }
+            }
+
+            static void renderSingles(context& p_ctxt, const std::vector<char32_t>& p_singles)
+            {
+                using namespace boost;
+
+                p_ctxt.indent();
+                p_ctxt.out << "pegtl::utf8::one<";
+                for (size_t i = 0; i < p_singles.size(); ++i)
+                {
+                    if (i > 0)
+                    {
+                        p_ctxt.out << ", ";
+                    }
+                    p_ctxt.out << str(format("0x%04x") % p_singles[i]);
+                }
+                p_ctxt.out << ">";
+            }
+
+            static void renderRanges(context& p_ctxt, const std::vector<range>& p_ranges)
+            {
+                using namespace boost;
+
+                p_ctxt.indent();
+                p_ctxt.out << "pegtl::utf8::ranges<";
+                for (size_t i = 0; i < p_ranges.size(); ++i)
+                {
+                    if (i > 0)
+                    {
+                        p_ctxt.out << ", ";
+                    }
+                    p_ctxt.out << str(format("0x%04x, 0x%04x") % p_ranges[i].first % p_ranges[i].second);
+                }
+                p_ctxt.out << ">";
+            }
+
+            virtual std::string dump() const
             {
                 std::string s;
                 s += "(";
@@ -285,7 +530,12 @@ namespace squeal
                 : part(crang_node::range(p_fst, p_lst))
             {}
 
-            virtual std::string dump()
+            virtual void render(context& p_ctxt) const
+            {
+                throw std::logic_error("cannot render partial character ranges");
+            }
+
+            virtual std::string dump() const
             {
                 std::string s;
                 s += "<<";
@@ -317,13 +567,47 @@ namespace squeal
             cclass_node(const std::string& p_name)
                 : name(p_name)
             {}
+
+            virtual void render(context& p_ctxt) const
+            {
+                p_ctxt.indent();
+                p_ctxt.out << "pegtl::utf8::icu::" << name;
+            }
+
+            virtual std::string dump() const
+            {
+                std::string s;
+                s += "(:";
+                s += name;
+                s += ":)";
+                return s;
+            }
         };
         using cclass_node_ptr = std::shared_ptr<cclass_node>;
 
         struct conj_node : node
         {
             std::deque<node_ptr> nodes;
-            virtual std::string dump() {
+
+            virtual void render(context& p_ctxt) const
+            {
+                p_ctxt.indent();
+                p_ctxt.out << "pegtl::seq<\n";
+                for (auto itr = nodes.begin(); itr != nodes.end(); ++itr)
+                {
+                    scope S(p_ctxt);
+                    if (itr != nodes.begin())
+                    {
+                        p_ctxt.out << ",\n";
+                    }
+                    (*itr)->render(p_ctxt);
+                }
+                p_ctxt.out << "\n";
+                p_ctxt.indent();
+                p_ctxt.out << ">";
+            }
+
+            virtual std::string dump() const {
                 std::string s;
                 s += "(";
                 for (size_t i = 0; i < nodes.size(); ++i)
@@ -343,7 +627,26 @@ namespace squeal
         struct disj_node : node
         {
             std::vector<node_ptr> nodes;
-            virtual std::string dump() {
+
+            virtual void render(context& p_ctxt) const
+            {
+                p_ctxt.indent();
+                p_ctxt.out << "pegtl::sor<\n";
+                for (auto itr = nodes.begin(); itr != nodes.end(); ++itr)
+                {
+                    scope S(p_ctxt);
+                    if (itr != nodes.begin())
+                    {
+                        p_ctxt.out << ",\n";
+                    }
+                    (*itr)->render(p_ctxt);
+                }
+                p_ctxt.out << "\n";
+                p_ctxt.indent();
+                p_ctxt.out << ">";
+            }
+
+            virtual std::string dump() const {
                 std::string s;
                 s += "{";
                 for (size_t i = 0; i < nodes.size(); ++i)
@@ -369,6 +672,28 @@ namespace squeal
                 : name(p_name), defn(p_defn)
             {
             }
+            virtual void render(context& p_ctxt) const
+            {
+                p_ctxt.indent();
+                p_ctxt.out << cpp::esc_name(name) << " :\n";
+                {
+                    scope S(p_ctxt);
+                    defn->render(p_ctxt);
+                }
+                p_ctxt.out << "\n";
+                p_ctxt.indent();
+                p_ctxt.out << "{};\n";
+            }
+
+            std::string dump() const
+            {
+                std::string s;
+                s += name;
+                s += " ::= ";
+                s += defn->dump();
+                return s;
+            }
+
         };
         using defn_node_ptr = std::shared_ptr<defn_node>;
 
