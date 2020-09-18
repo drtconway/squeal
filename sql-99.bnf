@@ -1,6 +1,9 @@
 %token-rule            <token>
+
 %reserved-word-rule    <reserved word>
+
 %other-keyword-rule    <non-reserved word>
+
 %identifier-character   <identifier part>
 
 <SQL terminal character> ::= <SQL language character>

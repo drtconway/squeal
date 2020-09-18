@@ -42,6 +42,23 @@ namespace //anonymous
         string ns_name;
     };
 
+    struct combinator_ns
+    {
+        combinator_ns(squeal::meta_grammar::context& p_ctxt, const std::string& p_ns)
+            : ctxt(p_ctxt), ns(p_ctxt.ns)
+        {
+            ctxt.ns = p_ns;
+        }
+
+        ~combinator_ns()
+        {
+            ctxt.ns = ns;
+        }
+
+        squeal::meta_grammar::context& ctxt;
+        string ns;
+    };
+
     void deps(const map<string, node_ptr>& p_defns, map<string,set<string>>& p_deps)
     {
         for (auto itr = p_defns.begin(); itr != p_defns.end(); ++itr)
@@ -52,25 +69,30 @@ namespace //anonymous
         }
     }
 
-    void gather(deque<string>& p_wanted, const map<string, node_ptr>& p_defns, map<string, node_ptr>& p_res)
+    void gather(deque<string>& p_wanted, const map<string, node_ptr>& p_defns, set<string>& p_res)
     {
-        set<string> seen(p_wanted.begin(), p_wanted.end());
-
         while (p_wanted.size() > 0)
         {
             string nm = p_wanted.front();
             p_wanted.pop_front();
-            p_res[nm] = p_defns.at(nm);
+            p_res.insert(nm);
             set<string> nms;
+            if (p_defns.find(nm) == p_defns.end())
+            {
+                string s;
+                s += "unknown rule name: ";
+                s += nm;
+                throw std::runtime_error(s);
+            }
             p_defns.at(nm)->names(nms);
             for (auto itr = nms.begin(); itr != nms.end(); ++itr)
             {
-                if (seen.count(*itr) > 0)
+                if (p_res.count(*itr) > 0)
                 {
                     continue;
                 }
                 p_wanted.push_back(*itr);
-                seen.insert(*itr);
+                p_res.insert(*itr);
             }
         }
     }
@@ -260,26 +282,51 @@ int main(int argc, const char* argv[])
             fwds(out, defns);
         }
 
+        string reserved_word_rule;
+        if (meta.find("reserved-word-rule") != meta.end())
+        {
+            reserved_word_rule = meta.at("reserved-word-rule");
+        }
+
         set<string> reserved;
-        defns.at("<reserved word>")->words(reserved);
+        if (defns.find(reserved_word_rule) != defns.end())
+        {
+            defns.at(reserved_word_rule)->words(reserved);
+        }
+
+        string non_reserved_word_rule;
+        if (meta.find("other-keyword-rule") != meta.end())
+        {
+            non_reserved_word_rule = meta.at("other-keyword-rule");
+        }
 
         set<string> non_reserved;
-        defns.at("<non-reserved word>")->words(non_reserved);
+        if (defns.find(non_reserved_word_rule) != defns.end())
+        {
+            defns.at(non_reserved_word_rule)->words(non_reserved);
+        }
 
         set<string> keywords;
         keywords.insert(reserved.begin(), reserved.end());
         keywords.insert(non_reserved.begin(), non_reserved.end());
 
+        string out_name("squeal_grammar_main.hpp");
+        if (meta.find("grammar-main-file") != meta.end())
         {
-            ofstream out("squeal_grammar_keywords.hpp");
+            out_name = meta.at("grammar-main-file");
+        }
 
-            squeal::meta_grammar::context ctxt(out);
-            ctxt.keywords = keywords;
+        ofstream out(out_name);
+        squeal::meta_grammar::context ctxt(out);
+        ctxt.keywords = keywords;
 
-            ns_scope NS0(ctxt, "squeal");
-            ns_scope NS1(ctxt, "grammar");
+        ns_scope NS0(ctxt, "squeal");
+        ns_scope NS1(ctxt, "grammar");
+
+        if (keywords.size())
+        {
+
             ns_scope NS2(ctxt, "keywords");
-
             {
                 ns_scope NS3(ctxt, "detail");
                 for (char c = 'A'; c <= 'Z'; ++c)
@@ -293,6 +340,7 @@ int main(int argc, const char* argv[])
                 ctxt.indent();
                 ctxt.out << "struct underscore : tao::pegtl::utf8::one<'_'> {};" << endl;
             }
+            ctxt.out << endl;
 
             for (auto itr = reserved.begin(); itr != reserved.end(); ++itr)
             {
@@ -320,73 +368,41 @@ int main(int argc, const char* argv[])
                 ctxt.out << "{};" << endl;
                 ctxt.out << endl;
             }
-        };
+        }
+        ctxt.out << endl;
 
-        map<string,node_ptr> tokens;
+        set<string> tokens;
+        if (meta.find("token-rule") != meta.end())
         {
+            string token_rule = meta.at("token-rule");
             deque<string> wanted;
-            wanted.push_back("<token>");
+            wanted.push_back(token_rule);
             gather(wanted, defns, tokens);
         }
 
-        set<string> seen;
+        map<string,set<string>> S;
+        deps(defns, S);
+        tarjan T(S);
+
+        for (auto itr = T.R.begin(); itr != T.R.end(); ++itr)
         {
-            ofstream out("squeal_grammar_lexemes.hpp");
-
-            squeal::meta_grammar::context ctxt(out);
-            ctxt.keywords = keywords;
-
-            map<string,set<string>> S;
-            deps(tokens, S);
-            tarjan T(S);
-
-            ns_scope NS0(ctxt, "squeal");
-            ns_scope NS1(ctxt, "grammar");
-
-            for (auto itr = T.R.begin(); itr != T.R.end(); ++itr)
+            const set<string>& xs = *itr;
+            for (auto jtr = xs.begin(); jtr != xs.end(); ++jtr)
             {
-                const set<string>& xs = *itr;
-                for (auto jtr = xs.begin(); jtr != xs.end(); ++jtr)
+                auto ktr = defns.find(*jtr);
+                if (ktr == defns.end())
                 {
-                    auto ktr = tokens.find(*jtr);
-                    if (ktr == tokens.end())
-                    {
-                        continue;
-                    }
-                    seen.insert(ktr->first);
+                    continue;
+                }
+                if (tokens.count(*jtr) > 0)
+                {
+                    combinator_ns C(ctxt, "detail::");
+
                     ktr->second->render(ctxt);
                     out << endl;
                 }
-            }
-        }
-        {
-            ofstream out("squeal_grammar_main.hpp");
-
-            squeal::meta_grammar::context ctxt(out);
-            ctxt.keywords = keywords;
-
-            map<string,set<string>> S;
-            deps(defns, S);
-            tarjan T(S);
-
-            ns_scope NS0(ctxt, "squeal");
-            ns_scope NS1(ctxt, "grammar");
-
-            for (auto itr = T.R.begin(); itr != T.R.end(); ++itr)
-            {
-                const set<string>& xs = *itr;
-                for (auto jtr = xs.begin(); jtr != xs.end(); ++jtr)
+                else
                 {
-                    if (seen.count(*jtr) > 0)
-                    {
-                        continue;
-                    }
-                    auto ktr = defns.find(*jtr);
-                    if (ktr == defns.end())
-                    {
-                        continue;
-                    }
-                    seen.insert(ktr->first);
                     ktr->second->render(ctxt);
                     out << endl;
                 }

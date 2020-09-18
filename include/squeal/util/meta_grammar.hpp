@@ -210,10 +210,11 @@ namespace squeal
         {
             std::ostream& out;
             int ind;
+            std::string ns;
             std::set<std::string> keywords;
 
             context(std::ostream& p_out)
-                : out(p_out), ind(0)
+                : out(p_out), ind(0), ns("tao::pegtl::")
             {}
 
             void indent()
@@ -611,7 +612,7 @@ namespace squeal
             virtual void render(context& p_ctxt) const
             {
                 p_ctxt.indent();
-                p_ctxt.out << "tao::pegtl::opt<\n";
+                p_ctxt.out << p_ctxt.ns << "opt<\n";
                 {
                     scope S(p_ctxt);
                     child->render(p_ctxt);
@@ -644,7 +645,7 @@ namespace squeal
             virtual void render(context& p_ctxt) const
             {
                 p_ctxt.indent();
-                p_ctxt.out << "tao::pegtl::plus<\n";
+                p_ctxt.out << p_ctxt.ns << "plus<\n";
                 {
                     scope S(p_ctxt);
                     child->render(p_ctxt);
@@ -677,7 +678,7 @@ namespace squeal
             virtual void render(context& p_ctxt) const
             {
                 p_ctxt.indent();
-                p_ctxt.out << "tao::pegtl::star<\n";
+                p_ctxt.out << p_ctxt.ns << "star<\n";
                 {
                     scope S(p_ctxt);
                     child->render(p_ctxt);
@@ -712,7 +713,7 @@ namespace squeal
             virtual void render(context& p_ctxt) const
             {
                 p_ctxt.indent();
-                p_ctxt.out << "pegtl::seq<\n";
+                p_ctxt.out << p_ctxt.ns << "seq<\n";
                 for (auto itr = nodes.begin(); itr != nodes.end(); ++itr)
                 {
                     scope S(p_ctxt);
@@ -767,7 +768,7 @@ namespace squeal
             virtual void render(context& p_ctxt) const
             {
                 p_ctxt.indent();
-                p_ctxt.out << "pegtl::sor<\n";
+                p_ctxt.out << p_ctxt.ns << "sor<\n";
                 for (auto itr = nodes.begin(); itr != nodes.end(); ++itr)
                 {
                     scope S(p_ctxt);
