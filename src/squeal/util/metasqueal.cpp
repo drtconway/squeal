@@ -280,6 +280,20 @@ int main(int argc, const char* argv[])
             ns_scope NS1(ctxt, "grammar");
             ns_scope NS2(ctxt, "keywords");
 
+            {
+                ns_scope NS3(ctxt, "detail");
+                for (char c = 'A'; c <= 'Z'; ++c)
+                {
+                    char l = c - 'A' + 'a';
+                    ctxt.indent();
+                    ctxt.out << "struct " << c << " : tao::pegtl::utf8::one<'" << c << "', '" << l  << "'> {};" << endl;
+                }
+                ctxt.indent();
+                ctxt.out << "struct hypen : tao::pegtl::utf8::one<'-'> {};" << endl;
+                ctxt.indent();
+                ctxt.out << "struct underscore : tao::pegtl::utf8::one<'_'> {};" << endl;
+            }
+
             for (auto itr = reserved.begin(); itr != reserved.end(); ++itr)
             {
                 ctxt.indent();
