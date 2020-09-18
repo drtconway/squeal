@@ -155,10 +155,14 @@ namespace squeal
             : seq<name, assigns, expression> {};
 
         struct meta_rule_name
-            : pegtl::plus<pegtl::sor<pegtl::ascii::alnum, pegtl::ascii::one<'-', '_'>>>
-        {};
+            : pegtl::plus<pegtl::sor<pegtl::ascii::alnum, pegtl::ascii::one<'-', '_'>>> {};
 
-        struct meta_rule : seq<percent, meta_rule_name, name> {};
+        struct meta_rule_space : pegtl::star<pegtl::ascii::one<' ', '\t'>> {};
+
+        struct meta_rule_value
+            : pegtl::star<pegtl::seq<pegtl::not_at<pegtl::eol>, pegtl::ascii::any>> {};
+
+        struct meta_rule : pegtl::seq<percent, meta_rule_space, meta_rule_name, meta_rule_space, meta_rule_value, pegtl::eolf> {};
 
         struct definition : pegtl::sor<meta_rule, grammar_definition> {};
 
@@ -1136,6 +1140,17 @@ namespace squeal
 
         template<>
         struct build_ast<meta_rule_name>
+        {
+            template<typename ActionInput>
+            static void apply(const ActionInput& p_in, state& p_state)
+            {
+                node_ptr p(new name_node(p_in.string()));
+                p_state.nodes.push_back(p);
+            }
+        };
+
+        template<>
+        struct build_ast<meta_rule_value>
         {
             template<typename ActionInput>
             static void apply(const ActionInput& p_in, state& p_state)
