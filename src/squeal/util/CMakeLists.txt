@@ -15,3 +15,4 @@ foreach(utilsourcefile ${util_sources})
     target_include_directories(${exename} PRIVATE ${Boost_INCLUDE_DIRS})
     target_link_libraries(${exename} ICU::uc ICU::i18n)
 endforeach(utilsourcefile)
+

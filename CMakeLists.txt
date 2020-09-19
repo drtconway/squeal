@@ -16,6 +16,8 @@ include_directories(include)
 
 add_subdirectory(src/squeal/util)
 
+add_subdirectory(src/squeal/parser)
+
 # testing
 enable_testing()
 option(SQUEAL_BUILD_TESTS "Build test programs" ON)

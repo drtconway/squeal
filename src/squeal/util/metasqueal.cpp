@@ -233,12 +233,43 @@ namespace //anonymous
         }
         return s;
     }
+
+    struct incl_guard
+    {
+        incl_guard(squeal::meta_grammar::context& p_ctxt, const string& p_filename)
+            : ctxt(p_ctxt), guard_name(mkGuard(p_filename))
+        {
+            ctxt.out << "#ifndef " << guard_name << endl;
+            ctxt.out << "#define " << guard_name << endl;
+        }
+
+        ~incl_guard()
+        {
+            ctxt.out << "#endif // " << guard_name << endl;
+        }
+
+        squeal::meta_grammar::context& ctxt;
+        const string guard_name;
+
+        static string mkGuard(const string& p_filename)
+        {
+            string s(p_filename);
+            replace(s.begin(), s.end(), ' ', '_');
+            replace(s.begin(), s.end(), '-', '_');
+            replace(s.begin(), s.end(), '/', '_');
+            replace(s.begin(), s.end(), '.', '_');
+            transform(s.begin(), s.end(), s.begin(), ::toupper);
+            return s;
+        }
+    };
 }
 // namespace anonymous
 
 int main(int argc, const char* argv[])
 {
     ifstream in(argv[1]);
+
+    string out_base = argv[2];
 
     map<string, squeal::meta_grammar::node_ptr> defns;
     map<string, string> meta;
@@ -278,7 +309,7 @@ int main(int argc, const char* argv[])
     if (1)
     {
         {
-            ofstream out("squeal_grammar_fwd_decls.hpp");
+            ofstream out(out_base + "/squeal_grammar_fwd_decls.hpp");
             fwds(out, defns);
         }
 
@@ -310,7 +341,7 @@ int main(int argc, const char* argv[])
         keywords.insert(reserved.begin(), reserved.end());
         keywords.insert(non_reserved.begin(), non_reserved.end());
 
-        string out_name("squeal_grammar_main.hpp");
+        string out_name(out_base + "/squeal_grammar_main.hpp");
         if (meta.find("grammar-main-file") != meta.end())
         {
             out_name = meta.at("grammar-main-file");
@@ -319,6 +350,8 @@ int main(int argc, const char* argv[])
         ofstream out(out_name);
         squeal::meta_grammar::context ctxt(out);
         ctxt.keywords = keywords;
+
+        incl_guard G(ctxt, out_name);
 
         ns_scope NS0(ctxt, "squeal");
         ns_scope NS1(ctxt, "grammar");

@@ -2218,7 +2218,7 @@
 		<open statement>
 	|	<fetch statement>
 	|	<close statement>
-	|	<select statement: single row>
+	|	<select statement single row>
 	|	<free locator statement>
 	|	<hold locator statement>
 	|	<SQL data change statement>
@@ -2243,7 +2243,7 @@
 
 <close statement> ::= CLOSE <cursor name>
 
-<select statement: single row> ::=
+<select statement single row> ::=
 		SELECT [ <set quantifier> ] <select list> INTO <select target list> <table expression>
 
 <select target list> ::= <target specification> [ { <comma> <target specification> }... ]
@@ -2257,20 +2257,20 @@
 		HOLD LOCATOR <locator reference> [ { <comma> <locator reference> }... ]
 
 <SQL data change statement> ::=
-		<delete statement: positioned>
-	|	<delete statement: searched>
+		<delete statement positioned>
+	|	<delete statement searched>
 	|	<insert statement>
-	|	<update statement: positioned>
-	|	<update statement: searched>
+	|	<update statement positioned>
+	|	<update statement searched>
 
-<delete statement: positioned> ::=
+<delete statement positioned> ::=
 		DELETE FROM <target table> WHERE CURRENT OF <cursor name>
 
 <target table> ::=
 		<table name>
 	|	[ ONLY ] <left paren> <table name> <right paren>
 
-<delete statement: searched> ::=
+<delete statement searched> ::=
 		DELETE FROM <target table> [ WHERE <search condition> ]
 
 <insert statement> ::=
@@ -2320,7 +2320,7 @@
 
 <from default> ::= DEFAULT VALUES
 
-<update statement: positioned> ::=
+<update statement positioned> ::=
 		UPDATE <target table> SET <set clause list> WHERE CURRENT OF <cursor name>
 
 <set clause list> ::= <set clause> [ { <comma> <set clause> }... ]
@@ -2341,7 +2341,7 @@
 
 <mutated target> ::= <object column> | <mutated set clause>
 
-<update statement: searched> ::=
+<update statement searched> ::=
 		UPDATE <target table> SET <set clause list> [ WHERE <search condition> ]
 
 <SQL control statement> ::=
@@ -3093,8 +3093,8 @@
 	|	<dynamic open statement>
 	|	<dynamic fetch statement>
 	|	<dynamic close statement>
-	|	<dynamic delete statement: positioned>
-	|	<dynamic update statement: positioned>
+	|	<dynamic delete statement positioned>
+	|	<dynamic update statement positioned>
 
 <allocate cursor statement> ::= ALLOCATE <extended cursor name> <cursor intent>
 
@@ -3117,10 +3117,10 @@
 
 <dynamic close statement> ::= CLOSE <dynamic cursor name>
 
-<dynamic delete statement: positioned> ::=
+<dynamic delete statement positioned> ::=
 		DELETE FROM <target table> WHERE CURRENT OF <dynamic cursor name>
 
-<dynamic update statement: positioned> ::=
+<dynamic update statement positioned> ::=
 		UPDATE <target table> SET <set clause list> WHERE CURRENT OF <dynamic cursor name>
 
 <double period> ::= <period> <period>
@@ -3136,13 +3136,13 @@
 	|	<direct implementation-defined statement>
 
 <direct SQL data statement> ::=
-		<delete statement: searched>
-	|	<direct select statement: multiple rows>
+		<delete statement searched>
+	|	<direct select statement multiple rows>
 	|	<insert statement>
-	|	<update statement: searched>
+	|	<update statement searched>
 	|	<temporary table declaration>
 
-<direct select statement: multiple rows> ::= <query expression> [ <order by clause> ]
+<direct select statement multiple rows> ::= <query expression> [ <order by clause> ]
 
 <set catalog statement> ::= SET <catalog name characteristic>
 
@@ -3755,22 +3755,22 @@
 	|	<preparable implementation-defined statement>
 
 <preparable SQL data statement> ::=
-		<delete statement: searched>
+		<delete statement searched>
 	|	<dynamic single row select statement>
 	|	<insert statement>
 	|	<dynamic select statement>
-	|	<update statement: searched>
-	|	<preparable dynamic delete statement: positioned>
-	|	<preparable dynamic update statement: positioned>
+	|	<update statement searched>
+	|	<preparable dynamic delete statement positioned>
+	|	<preparable dynamic update statement positioned>
 
 <dynamic single row select statement> ::= <query specification>
 
 <dynamic select statement> ::= <cursor specification>
 
-<preparable dynamic delete statement: positioned> ::=
+<preparable dynamic delete statement positioned> ::=
 		DELETE [ FROM <target table> ] WHERE CURRENT OF [ <scope option> ] <cursor name>
 
-<preparable dynamic update statement: positioned> ::=
+<preparable dynamic update statement positioned> ::=
 		UPDATE [ <target table> ] SET <set clause list> WHERE CURRENT OF [ <scope option> ] <cursor name>
 
 <preparable SQL schema statement> ::= <SQL schema statement>
