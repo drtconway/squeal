@@ -39,6 +39,24 @@ BOOST_AUTO_TEST_CASE( chrstr0 )
     squeal::parser::ast::node_ptr p = squeal::parser::value_expression(src);
     squeal::parser::ast::character_string_literal_node_ptr q = std::dynamic_pointer_cast<squeal::parser::ast::character_string_literal_node>(p);
     BOOST_REQUIRE_EQUAL(q != NULL, true);
-    BOOST_CHECK_EQUAL(q->value, "'a'");
+    BOOST_CHECK_EQUAL(q->value, "a");
+}
+
+BOOST_AUTO_TEST_CASE( chrstr1 )
+{
+    std::string src("'a' 'b'");
+    squeal::parser::ast::node_ptr p = squeal::parser::value_expression(src);
+    squeal::parser::ast::character_string_literal_node_ptr q = std::dynamic_pointer_cast<squeal::parser::ast::character_string_literal_node>(p);
+    BOOST_REQUIRE_EQUAL(q != NULL, true);
+    BOOST_CHECK_EQUAL(q->value, "ab");
+}
+
+BOOST_AUTO_TEST_CASE( chrstr2 )
+{
+    std::string src("'a''b'");
+    squeal::parser::ast::node_ptr p = squeal::parser::value_expression(src);
+    squeal::parser::ast::character_string_literal_node_ptr q = std::dynamic_pointer_cast<squeal::parser::ast::character_string_literal_node>(p);
+    BOOST_REQUIRE_EQUAL(q != NULL, true);
+    BOOST_CHECK_EQUAL(q->value, "a'b");
 }
 
