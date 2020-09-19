@@ -413,6 +413,16 @@ int main(int argc, const char* argv[])
             gather(wanted, defns, tokens);
         }
 
+        cout << tokens.count("<character string literal part>") << endl;
+
+        if (0)
+        {
+            for (auto itr = tokens.begin(); itr != tokens.end(); ++itr)
+            {
+                cout << *itr << endl;
+            }
+        }
+
         map<string,set<string>> S;
         deps(defns, S);
         tarjan T(S);
@@ -420,24 +430,46 @@ int main(int argc, const char* argv[])
         for (auto itr = T.R.begin(); itr != T.R.end(); ++itr)
         {
             const set<string>& xs = *itr;
+
+            map<string,set<string>> Sd;
             for (auto jtr = xs.begin(); jtr != xs.end(); ++jtr)
             {
                 auto ktr = defns.find(*jtr);
-                if (ktr == defns.end())
+                set<string> dx;
+                squeal::meta_grammar::defn_node_ptr p = dynamic_pointer_cast<squeal::meta_grammar::defn_node>(ktr->second);
+                if (p)
                 {
-                    continue;
+                    squeal::meta_grammar::name_node_ptr q = dynamic_pointer_cast<squeal::meta_grammar::name_node>(p->defn);
+                    if (q && xs.count(q->name))
+                    {
+                        dx.insert(q->name);
+                    }
                 }
-                if (tokens.count(*jtr) > 0)
+                Sd[ktr->first] = dx;
+            }
+            tarjan Td(Sd);
+            for (auto jtr = Td.R.begin(); jtr != Td.R.end(); ++jtr)
+            {
+                const set<string>& ys = *jtr;
+                for (auto ktr = ys.begin(); ktr != ys.end(); ++ktr)
                 {
-                    combinator_ns C(ctxt, "detail::");
+                    auto ltr = defns.find(*ktr);
+                    if (ltr == defns.end())
+                    {
+                        continue;
+                    }
+                    if (tokens.count(*ktr) == 0)
+                    {
+                        combinator_ns C(ctxt, "detail::");
 
-                    ktr->second->render(ctxt);
-                    out << endl;
-                }
-                else
-                {
-                    ktr->second->render(ctxt);
-                    out << endl;
+                        ltr->second->render(ctxt);
+                        out << endl;
+                    }
+                    else
+                    {
+                        ltr->second->render(ctxt);
+                        out << endl;
+                    }
                 }
             }
         }

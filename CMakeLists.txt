@@ -23,5 +23,6 @@ enable_testing()
 option(SQUEAL_BUILD_TESTS "Build test programs" ON)
 if(SQUEAL_BUILD_TESTS)
   add_subdirectory(src/test/squeal)
+  add_subdirectory(src/test/squeal/parser)
 endif()
 

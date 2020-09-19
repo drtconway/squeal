@@ -106,6 +106,27 @@ BOOST_AUTO_TEST_CASE( crang2 )
     BOOST_REQUIRE_EQUAL(p->parts.size(), 3);
 }
 
+BOOST_AUTO_TEST_CASE( crang3 )
+{
+    std::string src("(\u200C-\u200F\u202A-\u202E\u206A-\u206F\uFEFF)");
+
+    tao::pegtl::string_input in(src, "string");
+
+    squeal::meta_grammar::state S;
+
+    bool result = tao::pegtl::parse<squeal::meta_grammar::crang, squeal::meta_grammar::build_ast>(in, S);
+    BOOST_CHECK_EQUAL(result, true);
+
+    BOOST_REQUIRE_EQUAL(S.nodes.size(), 1);
+    squeal::meta_grammar::crang_node_ptr p = std::dynamic_pointer_cast<squeal::meta_grammar::crang_node>(S.nodes[0]);
+    BOOST_REQUIRE_EQUAL(p.get() != NULL, true);
+    BOOST_REQUIRE_EQUAL(p->parts.size(), 4);
+    BOOST_REQUIRE_EQUAL(p->parts[0].index(), 1);
+    BOOST_REQUIRE_EQUAL(p->parts[1].index(), 1);
+    BOOST_REQUIRE_EQUAL(p->parts[2].index(), 1);
+    BOOST_REQUIRE_EQUAL(p->parts[3].index(), 0);
+}
+
 BOOST_AUTO_TEST_CASE( conj0 )
 {
     std::string src("<a> <b> <c> <d>");

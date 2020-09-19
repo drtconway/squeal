@@ -201,6 +201,8 @@ namespace squeal
                 {
                     s.push_back('_');
                 }
+                std::replace(s.begin(), s.end(), ' ', '_');
+                std::replace(s.begin(), s.end(), '-', '_');
                 return s;
             }
 
@@ -336,11 +338,11 @@ namespace squeal
                 if (word.size() == 1)
                 {
                     p_ctxt.indent();
-                    p_ctxt.out << "tao::pegt::utf8::one<'" << cpp::esc_char(word[0]) << "'>";
+                    p_ctxt.out << "tao::pegtl::utf8::one<'" << cpp::esc_char(word[0]) << "'>";
                     return;
                 }
 
-                p_ctxt.out << "tao::pegt::utf8::string<";
+                p_ctxt.out << "tao::pegtl::utf8::string<";
                 for (auto itr = word.begin(); itr != word.end(); ++itr)
                 {
                     if (itr != word.begin())
@@ -389,7 +391,7 @@ namespace squeal
             using range = std::pair<char32_t,char32_t>;
             using single_or_range = std::variant<single,range>;
 
-            std::vector<single_or_range> parts;
+            std::deque<single_or_range> parts;
 
             virtual void names(std::set<std::string>& p_names) const
             {
@@ -432,7 +434,7 @@ namespace squeal
                 else
                 {
                     p_ctxt.indent();
-                    p_ctxt.out << "pegtl::utf8::one<";
+                    p_ctxt.out << "tao::pegtl::sor<\n";
                     {
                         scope S(p_ctxt);
                         renderSingles(p_ctxt, singles);
@@ -440,6 +442,7 @@ namespace squeal
                         renderRanges(p_ctxt, ranges);
                         p_ctxt.out << "\n";
                     }
+                    p_ctxt.indent();
                     p_ctxt.out << ">";
                 }
             }
@@ -449,7 +452,7 @@ namespace squeal
                 using namespace boost;
 
                 p_ctxt.indent();
-                p_ctxt.out << "pegtl::utf8::one<";
+                p_ctxt.out << "tao::pegtl::utf8::one<";
                 for (size_t i = 0; i < p_singles.size(); ++i)
                 {
                     if (i > 0)
@@ -466,7 +469,7 @@ namespace squeal
                 using namespace boost;
 
                 p_ctxt.indent();
-                p_ctxt.out << "pegtl::utf8::ranges<";
+                p_ctxt.out << "tao::pegtl::utf8::ranges<";
                 for (size_t i = 0; i < p_ranges.size(); ++i)
                 {
                     if (i > 0)
@@ -577,7 +580,7 @@ namespace squeal
             virtual void render(context& p_ctxt) const
             {
                 p_ctxt.indent();
-                p_ctxt.out << "pegtl::utf8::icu::" << name;
+                p_ctxt.out << "tao::pegtl::utf8::icu::" << name;
             }
 
             virtual std::string dump() const
@@ -822,8 +825,13 @@ namespace squeal
 
             virtual void render(context& p_ctxt) const
             {
+                special_node_ptr p = std::dynamic_pointer_cast<special_node>(defn);
+                if (p)
+                {
+                    p_ctxt.out << "#if 0" << std::endl;
+                }
                 p_ctxt.indent();
-                p_ctxt.out << cpp::esc_name(name) << " :\n";
+                p_ctxt.out << "struct " << cpp::esc_name(name) << " :\n";
                 {
                     scope S(p_ctxt);
                     defn->render(p_ctxt);
@@ -831,6 +839,10 @@ namespace squeal
                 p_ctxt.out << "\n";
                 p_ctxt.indent();
                 p_ctxt.out << "{};\n";
+                if (p)
+                {
+                    p_ctxt.out << "#endif" << std::endl;
+                }
             }
 
             std::string dump() const
@@ -1042,7 +1054,7 @@ namespace squeal
                     node_ptr p0 = p_state.nodes.back();
                     p_state.nodes.pop_back();
                     crang_part_node_ptr p = std::dynamic_pointer_cast<crang_part_node>(p0);
-                    r->parts.push_back(p->part);
+                    r->parts.push_front(p->part);
                 }
                 p_state.nodes.push_back(std::static_pointer_cast<node>(r));
             }
