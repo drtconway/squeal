@@ -262,6 +262,29 @@ namespace //anonymous
             return s;
         }
     };
+
+
+    void render_identifier_rule(squeal::meta_grammar::context& p_ctxt, node_ptr p_defn)
+    {
+        auto ptr = dynamic_pointer_cast<squeal::meta_grammar::defn_node>(p_defn);
+
+        p_ctxt.indent();
+        p_ctxt.out << "struct " << squeal::meta_grammar::cpp::esc_name(ptr->name) << " :\n";
+        {
+            squeal::meta_grammar::scope S0(p_ctxt);
+            p_ctxt.indent();
+            p_ctxt.out << "tao::pegtl::seq<\n";
+            {
+                squeal::meta_grammar::scope S1(p_ctxt);
+                p_ctxt.indent();
+                p_ctxt.out << "tao::pegtl::not_at<key_word>,\n";
+                ptr->defn->render(p_ctxt);
+            }
+            p_ctxt.out << ">\n";
+        }
+        p_ctxt.indent();
+        p_ctxt.out << "{};\n";
+    }
 }
 // namespace anonymous
 
@@ -311,6 +334,48 @@ int main(int argc, const char* argv[])
         {
             ofstream out(out_base + "/squeal_grammar_fwd_decls.hpp");
             fwds(out, defns);
+        }
+
+        {
+            ofstream out(out_base + "/squeal_grammar_blacklist.hpp");
+
+            for (auto itr = defns.begin(); itr != defns.end(); ++itr)
+            {
+                auto ptr = dynamic_pointer_cast<squeal::meta_grammar::defn_node>(itr->second);
+                if (!ptr)
+                {
+                    continue;
+                }
+
+                auto qtr = dynamic_pointer_cast<squeal::meta_grammar::disj_node>(ptr->defn);
+                if (!qtr)
+                {
+                    continue;
+                }
+
+                bool ok = true;
+                for (auto jtr = qtr->nodes.begin(); jtr != qtr->nodes.end() && ok; ++jtr)
+                {
+                    auto rtr = dynamic_pointer_cast<squeal::meta_grammar::name_node>(*jtr);
+                    if (!rtr)
+                    {
+                        ok = false;
+                    }
+                }
+
+                if (ok)
+                {
+                    out << "    template<> struct blacklist<squeal::grammar::"
+                                << squeal::meta_grammar::cpp::esc_name(itr->first) << "> : std::false_type {};" << endl;
+                }
+            }
+        }
+
+        string identifier_rule;
+        if (meta.find("identifier-rule") != meta.end())
+        {
+            identifier_rule = meta.at("identifier-rule");
+            std::cout << "identifier-rule: " << identifier_rule << std::endl;
         }
 
         string reserved_word_rule;
@@ -462,12 +527,26 @@ int main(int argc, const char* argv[])
                     {
                         combinator_ns C(ctxt, "detail::");
 
-                        ltr->second->render(ctxt);
+                        if (*ktr == identifier_rule)
+                        {
+                            render_identifier_rule(ctxt, ltr->second);
+                        }
+                        else
+                        {
+                            ltr->second->render(ctxt);
+                        }
                         out << endl;
                     }
                     else
                     {
-                        ltr->second->render(ctxt);
+                        if (*ktr == identifier_rule)
+                        {
+                            render_identifier_rule(ctxt, ltr->second);
+                        }
+                        else
+                        {
+                            ltr->second->render(ctxt);
+                        }
                         out << endl;
                     }
                 }

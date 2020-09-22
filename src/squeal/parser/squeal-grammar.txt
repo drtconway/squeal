@@ -4,7 +4,7 @@
 
 %other-keyword-rule    <non-reserved word>
 
-%identifier-character   <identifier part>
+%identifier-rule   <identifier>
 
 <SQL terminal character> ::= <SQL language character>
 
@@ -488,7 +488,7 @@
 
 <quote symbol> ::= <quote><quote>
 
-<separator> ::= { <comment> | <white space> }...
+<separator> ::= { <white space> | <comment> }...
 
 <comment> ::= <simple comment> | <bracketed comment>
 
@@ -630,10 +630,12 @@
 <constraint name> ::= <schema qualified name>
 
 <column constraint> ::=
-		NOT NULL
+		<not null column constraint>
 	|	<unique specification>
 	|	<references specification>
 	|	<check constraint definition>
+
+<not null column constraint> ::= NOT NULL
 
 <unique specification> ::= UNIQUE | PRIMARY KEY
 
@@ -662,15 +664,17 @@
 
 <search condition> ::= <boolean value expression>
 
-<boolean value expression> ::=
-		<boolean term>
-	|	<boolean value expression> OR <boolean term>
+<boolean value expression> ::= <boolean term> [ <boolean or expression>... ]
 
-<boolean term> ::=
-		<boolean factor>
-	|	<boolean term> AND <boolean factor>
+<boolean or expression> ::= OR <boolean term>
 
-<boolean factor> ::= [ NOT ] <boolean test>
+<boolean term> ::= <boolean factor> [ <boolean and term>... ]
+
+<boolean and term> ::= AND <boolean factor>
+
+<boolean factor> ::= [ <boolean not> ] <boolean test>
+
+<boolean not> ::= NOT
 
 <boolean test> ::= <boolean primary> [ IS [ NOT ] <truth value> ]
 
