@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 find_package(Boost REQUIRED COMPONENTS unit_test_framework)
 
 set(testsources
+    markov.cpp
     meta_grammar.cpp
     utf8.cpp)
 

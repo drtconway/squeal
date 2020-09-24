@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
 
 set(util_sources
+    generator.cpp
     metasqueal.cpp)
 
 foreach(utilsourcefile ${util_sources})

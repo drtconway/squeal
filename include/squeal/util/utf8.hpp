@@ -68,6 +68,17 @@ namespace squeal
                 std::string& m_dest;
             };
 
+            std::string to_utf8(const std::u32string& p_u32str)
+            {
+                std::string res;
+                encoder enc(res);
+                for (auto itr = p_u32str.begin(); itr != p_u32str.end(); ++itr)
+                {
+                    enc.push_back(*itr);
+                }
+                return res;
+            }
+
             struct decoder
             {
                 class const_iterator
@@ -212,6 +223,17 @@ namespace squeal
                 std::string::const_iterator m_begin;
                 std::string::const_iterator m_end;
             };
+
+            std::u32string from_utf8(const std::string& p_utf8str)
+            {
+                std::u32string res;
+                decoder dec(p_utf8str);
+                for (auto itr = dec.begin(); itr != dec.end(); ++itr)
+                {
+                    res.push_back(*itr);
+                }
+                return res;
+            }
         }
         // namespace utf8
     }

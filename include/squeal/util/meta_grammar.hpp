@@ -5,6 +5,7 @@
 #include <tao/pegtl/contrib/icu/utf8.hpp>
 
 #include <deque>
+#include <map>
 #include <set>
 #include <variant>
 
